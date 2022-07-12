@@ -787,7 +787,7 @@ namespace OsEngine.Robots.MyBot.Insight
 
                 if (priceOpenPos + indent < Price) // если цена выросла  больше допустимого стопа переносим стоп сделки в безубыток
                 {
-                    stopBuy = priceOpenPos + 0.5m * indent;
+                    stopBuy = priceOpenPos + indent;
                 }
             }
             if (_tabSimple.PositionsLast.Direction == Side.Sell)
@@ -800,7 +800,7 @@ namespace OsEngine.Robots.MyBot.Insight
                 if (Price < priceOpenPos - indent) // если цена снизилась  больше допустимого стопа переносим стоп сделки в безубыток
                 {
                     {
-                        stopSell = priceOpenPos - 0.3m * indent;
+                        stopSell = priceOpenPos - indent;
                     }
                 }
             }
