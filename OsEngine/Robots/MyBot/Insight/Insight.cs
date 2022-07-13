@@ -33,33 +33,7 @@ namespace OsEngine.Robots.MyBot.Insight
             TabCreate(BotTabType.Cluster); // вкладка для кластеров расчет дельты
             _tabClusterSpotDelta = TabsCluster[1];
 
-            _atr = new Atr(name + "Atr", false)
-            {
-                Lenght = 10,
-                ColorBase = Color.DodgerBlue,
-                PaintOn = true,
-            };
-            _atr = _tabSimple.CreateCandleIndicator(_atr, "atrArea");
-            _atr.Save();
-
-            _ma = new MovingAverage(name + "Ma", false)
-            {
-                Lenght = 100,
-                ColorBase = Color.DodgerBlue,
-                PaintOn = true,
-            };
-            _ma = _tabSimple.CreateCandleIndicator(_ma, "Prime");
-            _ma.Save();
-
-            _eR = new EfficiencyRatio(name + "eR", false)
-            {
-                Lenght = 10,
-                ColorBase = Color.DodgerBlue,
-                PaintOn = true,
-            };
-            _eR = _tabSimple.CreateCandleIndicator(_eR, "erArea");
-            _eR.Save();
-
+ 
             DistLongInit = 6;
             LongAdj = 0.1m;
             DistShortInit = 6;
@@ -146,23 +120,7 @@ namespace OsEngine.Robots.MyBot.Insight
         private BotTabCluster _tabClusterSpot;
         private BotTabCluster _tabClusterSpotDelta;
 
-        // индикаторы
-
-        /// <summary>
-        /// Атр
-        /// </summary>
-        private IIndicator _atr;
-
-        /// <summary>
-        /// мувинг
-        /// </summary>
-        private IIndicator _ma;
-
-        /// <summary>
-        /// KaufmanEr
-        /// </summary>
-        private IIndicator _eR;
-
+  
         /// <summary>
         /// настройки на параметрах  
         /// </summary>
@@ -695,39 +653,6 @@ namespace OsEngine.Robots.MyBot.Insight
         }
 
         /// <summary>
-        /// берем цену для открытия позиции
-        /// </summary>
-        private decimal GetPriceToOpenPos(Side side, List<Candle> candles, int index)
-        {
-            if (side == Side.Buy)
-            {
-                decimal price = 0;
-
-                for (int i = index; i > 0 && i > index - BarOldPeriod.ValueInt; i--) // тут находим наибольшую цену за период BarOldPeriod
-                {
-                    if (candles[i].High > price)
-                    {
-                        price = candles[i].High;
-                    }
-                }
-                return price;// +_tabSimple.Securiti.PriceStep;
-            }
-            if (side == Side.Sell)
-            {
-                decimal price = decimal.MaxValue;
-                for (int i = index; i > 0 && i > index - BarOldPeriod.ValueInt; i--) // тут находим наименьшую цену за период BarOldPeriod
-                {
-                    if (candles[i].Low < price)
-                    {
-                        price = candles[i].Low;
-                    }
-                }
-                return price; // -_tabSimple.Securiti.PriceStep;
-            }
-            return 0;
-        }
-
-        /// <summary>
         /// событие - пришел новый стакан
         /// </summary>
         private void _tab_MarketDepthUpdateEvent(MarketDepth marketDepth)
@@ -735,18 +660,6 @@ namespace OsEngine.Robots.MyBot.Insight
             if (_tabSimple.IsConnected == false)
             {
                 return;
-            }
-
-            decimal vol = 0;
-
-            for (int i = 0; marketDepth.Asks.Count != 0 && i < marketDepth.Asks.Count; i++)
-            {
-                if (marketDepth.Asks[i].Ask > vol)
-                {
-                    vol = marketDepth.Asks[i].Ask;
-                    //vol = marketDepth.GetCopy().Asks.Count;
-                    // Price = vol;
-                }
             }
         }
 
@@ -790,20 +703,7 @@ namespace OsEngine.Robots.MyBot.Insight
                     stopBuy = priceOpenPos + indent;
                 }
             }
-            if (_tabSimple.PositionsLast.Direction == Side.Sell)
-            {
-                if (Price > priceOpenPos)
-                {
-                    return;
-                }
 
-                if (Price < priceOpenPos - indent) // если цена снизилась  больше допустимого стопа переносим стоп сделки в безубыток
-                {
-                    {
-                        stopSell = priceOpenPos - indent;
-                    }
-                }
-            }
         }
 
         public bool dinamik;
@@ -848,19 +748,9 @@ namespace OsEngine.Robots.MyBot.Insight
                 // когда стоп выше безубытка позиции
                 if (Price > priceOpenPos + komis + Price * (toProfit.ValueDecimal / 100))
                 {
-                    decimal kauf = ((EfficiencyRatio)_eR).Values[((EfficiencyRatio)_eR).Values.Count - 1];
-                    if (kauf > 0.6m)
+                       if (vklRasKauf.ValueBool == true)    // динамика
                     {
-                        dinamik = true;
-                    }
-                    if (kauf < 0.3m)
-                    {
-                        dinamik = false;
-                    }
-
-                    if (vklRasKauf.ValueBool == true)    // динамика
-                    {
-                        stopActivacion = Price - Price * ((toProfit.ValueDecimal + kauf) / 100);
+                        stopActivacion = Price - Price * ((toProfit.ValueDecimal ) / 100);
                         stopOrderPrice = stopActivacion - slippage.ValueInt * _tabSimple.Securiti.PriceStep;
                         _tabSimple.CloseAtTrailingStop(_tabSimple.PositionsLast, stopActivacion, stopOrderPrice);
                         stopBuy = stopActivacion;
@@ -871,50 +761,6 @@ namespace OsEngine.Robots.MyBot.Insight
                         stopOrderPrice = stopActivacion - slippage.ValueInt * _tabSimple.Securiti.PriceStep;
                         _tabSimple.CloseAtTrailingStop(_tabSimple.PositionsLast, stopActivacion, stopOrderPrice);
                         stopBuy = stopActivacion;
-                    }
-                }
-            }
-            if (_tabSimple.PositionsLast.Direction == Side.Sell)
-            {
-                if (Price > priceOpenPos)
-                {
-                    return;
-                }
-                decimal stopActivacion = Price + Price * (lengthStartStop.ValueDecimal / 100);
-                decimal stopOrderPrice = stopActivacion + slippage.ValueInt * _tabSimple.Securiti.PriceStep;
-
-                if (stopActivacion >= priceOpenPos - komis) // пока стоп не перекрыл безубыток, держим его на расстоянии lengthStartStop
-                {
-                    stopActivacion = Price + Price * (lengthStartStop.ValueDecimal / 100);
-                    _tabSimple.CloseAtTrailingStop(_tabSimple.PositionsLast, stopActivacion, stopOrderPrice);
-                    stopSell = stopActivacion;
-
-                }
-
-                if (stopActivacion < priceOpenPos - komis - Price * (toProfit.ValueDecimal / 100))  // когда стоп перекрыл безубыток, держим его на расстоянии toProfit
-                {
-                    decimal kauf = ((EfficiencyRatio)_eR).Values[((EfficiencyRatio)_eR).Values.Count - 1];
-                    if (kauf > 0.6m)
-                    {
-                        dinamik = true;
-                    }
-                    if (kauf < 0.3m)
-                    {
-                        dinamik = false;
-                    }
-                    if (vklRasKauf.ValueBool == true)
-                    {
-                        stopActivacion = Price + Price * ((toProfit.ValueDecimal + kauf) / 100);
-                        stopOrderPrice = stopActivacion + slippage.ValueInt * _tabSimple.Securiti.PriceStep;
-                        _tabSimple.CloseAtTrailingStop(_tabSimple.PositionsLast, stopActivacion, stopOrderPrice);
-                        stopSell = stopActivacion;
-                    }
-                    else
-                    {
-                        stopActivacion = Price + Price * (toProfit.ValueDecimal / 100);
-                        stopOrderPrice = stopActivacion + slippage.ValueInt * _tabSimple.Securiti.PriceStep;
-                        _tabSimple.CloseAtTrailingStop(_tabSimple.PositionsLast, stopActivacion, stopOrderPrice);
-                        stopSell = stopActivacion;
                     }
                 }
             }
@@ -982,24 +828,17 @@ namespace OsEngine.Robots.MyBot.Insight
                     else
                     {
                         distanse = DistLongInit;
-                        decimal kauf = ((EfficiencyRatio)_eR).Values[i];
-
-                        if (kauf >= 0.6m)
+   
                         {
                             distanse -= 2.0m * LongAdj;
-                        }
-                        if (kauf >= 0.3m)
-                        {
-                            distanse -= 1.0m * LongAdj;
                         }
                     }
                 }
 
                 // 3 рассчитываем цену Стопа
                 Min_loss();  // расчет стопа
-                decimal lastAtr = ((Atr)_atr).Values[index];
-
-                decimal stopCandel = maxHigh - lastAtr * distanse; // стоп рассчитываемый по свечам
+ 
+                decimal stopCandel = maxHigh ; // стоп рассчитываемый по свечам
                 if (stopCandel < stopBuy)
                 {
                     return stopBuy;
@@ -1015,99 +854,6 @@ namespace OsEngine.Robots.MyBot.Insight
                         return stopBuy;
                     }
 
-                }
-            }
-            if (side == Side.Sell)
-            {
-                // рассчитываем цену стопа при Шорте
-                // 1 находим максимум за время от открытия сделки и до текущего
-                decimal minLow = decimal.MaxValue;
-                int indexIntro = 0;
-                DateTime openPositionTime = positionCreateTime;
-
-                if (openPositionTime == DateTime.MinValue)
-                {
-                    openPositionTime = candles[index - 1].TimeStart;
-                }
-
-                for (int i = index; i > 0; i--)
-                { // смотрим индекс свечи, после которой произошло открытие позы
-                    if (candles[i].TimeStart <= openPositionTime)
-                    {
-                        indexIntro = i;
-                        break;
-                    }
-                }
-
-                for (int i = indexIntro; i < index + 1; i++)
-                { // смотрим Минимальный лой
-
-                    if (candles[i].Low < minLow)
-                    {
-                        minLow = candles[i].Low;
-                    }
-                }
-
-                // 2 рассчитываем текущее отклонение для стопа
-                decimal distanse = lengthStartStop.ValueDecimal;
-
-                for (int i = indexIntro; i < index + 1; i++)
-                { // смотрим коэффициент
-
-                    DateTime lastTradeTime = candles[i].TimeStart;
-
-                    if (lastTradeTime.Hour < TimeFrom.ValueInt && TimeFrom.ValueInt != 0 ||
-                        lastTradeTime.Hour > TimeTo.ValueInt && TimeTo.ValueInt != 0 ||
-                        lastTradeTime.Hour == 10 && TimeFrom.ValueInt == 10 && lastTradeTime.Minute == 0)
-                    {
-                        continue;
-                    }
-                    if (vklRasCandl.ValueBool == false) // вкючено ли слежение по свечам
-                    {
-                        return stopSell;
-                    }
-                    else
-                    {
-                        distanse = DistShortInit;
-                        decimal kauf = ((EfficiencyRatio)_eR).Values[i];
-
-                        if (kauf > 0.6m)
-                        {
-                            distanse -= 2.0m * ShortAdj;
-                        }
-                        if (kauf > 0.3m)
-                        {
-                            distanse -= 1.0m * ShortAdj;
-                        }
-                    }
-                }
-
-                // 3 рассчитываем цену Стопа по свечам и от величины минимально стопака 
-
-                decimal lastAtr = ((Atr)_atr).Values[index];
-                Min_loss();
-                if (vklRasCandl.ValueBool == false) // вкючено ли слежение по свечам
-                {
-                    return stopSell;
-                }
-                else
-                {
-                    decimal stopCandle = Math.Round(minLow + lastAtr * distanse, _tabSimple.Securiti.Decimals); // стоп рассчитываемый по свечам
-                    if (stopCandle > stopSell)
-                    {
-                        return stopSell;
-                    }
-                    if (stopCandle < stopSell)
-                    {
-                        if (vklRasCandl.ValueBool == true)
-                        {
-                            return stopCandle;
-                        }
-                        else
-                        {
-                            return stopSell;
-                        }
-                    }
                 }
             }
             return 0;
@@ -1137,11 +883,6 @@ namespace OsEngine.Robots.MyBot.Insight
                 {
                     _tabSimple.CloseAtLimit(_positionToClose, _tabSimple.PriceBestAsk - _tabSimple.Securiti.PriceStep * 10, _positionToClose.OpenVolume);
                 }
-                else if (_positionToClose.OpenVolume != 0 && _positionToClose.Direction == Side.Sell)
-                {
-                    _tabSimple.CloseAtLimit(_positionToClose, _tabSimple.PriceBestAsk + _tabSimple.Securiti.PriceStep * 10, _positionToClose.OpenVolume);
-                }
-
                 _positionToClose = null;
             }
         }
@@ -1362,12 +1103,6 @@ namespace OsEngine.Robots.MyBot.Insight
                 _reActivatorIsOn = false;
                 ReActivateOrder(_reActivatorOrder);
             }
-            else if (_reActivatorOrder.Side == Side.Sell &&
-                trade.Price >= _reActivatorPrice)
-            {
-                _reActivatorIsOn = false;
-                ReActivateOrder(_reActivatorOrder);
-            }
         }
 
         /// <summary>
@@ -1411,10 +1146,6 @@ namespace OsEngine.Robots.MyBot.Insight
                 if (_reActivatorOrder.Side == Side.Buy)
                 {
                     _tabSimple.BuyAtLimit(Convert.ToInt32(_reActivatorOrder.Volume), _reActivatorOrder.Price);
-                }
-                else if (_reActivatorOrder.Side == Side.Sell)
-                {
-                    _tabSimple.SellAtLimit(Convert.ToInt32(_reActivatorOrder.Volume), _reActivatorOrder.Price);
                 }
             }
             else if (myPosition.OpenVolume != 0)
