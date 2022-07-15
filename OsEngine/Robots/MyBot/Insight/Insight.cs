@@ -33,7 +33,6 @@ namespace OsEngine.Robots.MyBot.Insight
             TabCreate(BotTabType.Cluster); // вкладка для кластеров расчет дельты
             _tabClusterSpotDelta = TabsCluster[1];
 
- 
             DistLongInit = 6;
             LongAdj = 0.1m;
             DistShortInit = 6;
@@ -674,7 +673,6 @@ namespace OsEngine.Robots.MyBot.Insight
             lineOpenPos = 0; //  обнуляем уровень входа
         }
 
-
         /// <summary>
         /// для сдвига стопа  
         /// </summary>
@@ -703,7 +701,6 @@ namespace OsEngine.Robots.MyBot.Insight
                     stopBuy = priceOpenPos + indent;
                 }
             }
-
         }
 
         public bool dinamik;
@@ -853,7 +850,6 @@ namespace OsEngine.Robots.MyBot.Insight
                     {
                         return stopBuy;
                     }
-
                 }
             }
             return 0;
@@ -1010,7 +1006,6 @@ namespace OsEngine.Robots.MyBot.Insight
                         }
                         else if (order.State == OrderStateType.Fail)
                         {
-
                             AlertMessageManager.ThrowAlert(Properties.Resources.wolf01, NameStrategyUniq, "Ошибка выставления ордера");
                             myOrder.Remove(order);
                             i--;

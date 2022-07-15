@@ -167,6 +167,7 @@
     <Compile Include="Alerts\AlertToPriceCreateUi.xaml.cs">
       <DependentUpon>AlertToPriceCreateUi.xaml</DependentUpon>
     </Compile>
+    <Compile Include="bin\Debug\Custom\Indicators\Scripts\DSR.cs" />
     <Compile Include="bin\Debug\Custom\Robots\Breakdown.cs" />
     <Compile Include="bin\Debug\Custom\Robots\RobotPriceChannel.cs" />
     <Compile Include="Charts\CandleChart\Elements\IChartElement.cs" />
@@ -892,6 +893,13 @@
     <Compile Include="Robots\MyBot\Breakdown_Ui.xaml.cs">
       <DependentUpon>Breakdown_Ui.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Robots\MyBot\InsightScreener\InsightScreener.cs" />
+    <Compile Include="Robots\MyBot\InsightScreener\InsiRobot.cs" />
+    <Compile Include="Robots\MyBot\InsightScreener\InsiSettings.xaml.cs">
+      <DependentUpon>InsiSettings.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Robots\MyBot\InsightScreener\SettingsViewModel.cs" />
+    <Compile Include="Robots\MyBot\InsightScreener\ViewModBase.cs" />
     <Compile Include="Robots\MyBot\Insight\Insight.cs" />
     <Compile Include="Robots\MyBot\Insight\InsightUI.xaml.cs">
       <DependentUpon>InsightUI.xaml</DependentUpon>
@@ -1429,6 +1437,10 @@
     <Page Include="Robots\MyBot\Breakdown_Ui.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Robots\MyBot\InsightScreener\InsiSettings.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Robots\MyBot\Insight\InsightUI.xaml">
       <SubType>Designer</SubType>

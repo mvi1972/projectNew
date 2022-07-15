@@ -1,0 +1,38 @@
+﻿<Window x:Class="OsEngine.Robots.MyBot.InsightScreener.InsiSettings"
+         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm ="clr-namespace:OsEngine.Robots.MyBot.InsightScreener"
+        mc:Ignorable="d"
+        Title="Настройки роботов"
+        Height="300"
+        Width="800"
+
+        Style="{StaticResource WindowStyleNoResize}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <DataGrid ItemsSource="{Binding Robots}"
+            x:Name="DataGridSettings"
+            Margin="10"
+            AutoGenerateColumns="False"
+            Grid.Row="0">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Бумага" Binding="{Binding Path=SecurityName}" />
+                <DataGridCheckBoxColumn Header="Торговать бумагу"  Binding="{Binding TradePaper , UpdateSourceTrigger=PropertyChanged}" />
+                <DataGridCheckBoxColumn Header="По Хвостам" Binding="{Binding Tail, UpdateSourceTrigger=PropertyChanged}" />
+                <DataGridCheckBoxColumn Header="Задержка" Binding="{Binding IsOnDelay, UpdateSourceTrigger=PropertyChanged}" />
+                <DataGridCheckBoxColumn Header="Трейлинг профит" Binding="{Binding IsOnTrelingProfit, UpdateSourceTrigger=PropertyChanged}" />
+                <DataGridCheckBoxColumn Header="Трейлинг-стоп" Binding="{Binding IsOnTrelingStopLoss, UpdateSourceTrigger=PropertyChanged}" />
+                <DataGridCheckBoxColumn Header="Трейк профит" Binding="{Binding IsOnTakeProfit, UpdateSourceTrigger=PropertyChanged}" />
+                <DataGridTextColumn Header="класс" Binding="{Binding Path=SecurClass}" />
+                <DataGridTextColumn Header="объем в $"  Binding="{Binding InBucks, UpdateSourceTrigger=LostFocus}" />
+                <DataGridTextColumn Header="объем в %" Binding="{Binding InPercent, UpdateSourceTrigger=LostFocus}" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Window>

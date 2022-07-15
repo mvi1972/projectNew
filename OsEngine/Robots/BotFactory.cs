@@ -24,6 +24,7 @@ using OsEngine.Robots.Trend;
 using OsEngine.Robots.OnScriptIndicators;
 using OsEngine.Robots.MyBot;
 using OsEngine.Robots.MyBot.Insight;
+using OsEngine.Robots.MyBot.InsightScreener;
 
 namespace OsEngine.Robots
 {
@@ -42,6 +43,8 @@ namespace OsEngine.Robots
             result.Add("ParaboTrel");
 
             result.Add("Insight");
+
+            result.Add("InsightScreener");
             /*
             result.Add("SmaScreener");
             result.Add("Fisher");
@@ -122,6 +125,11 @@ namespace OsEngine.Robots
             {
                 bot = CreateScriptStrategyByName(nameClass, name, startProgram);
                 return bot;
+            }
+
+            if (nameClass == "InsightScreener")
+            {
+                bot = new InsightScreener(name, startProgram);
             }
 
 
