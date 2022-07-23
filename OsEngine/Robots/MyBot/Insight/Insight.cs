@@ -56,6 +56,7 @@ namespace OsEngine.Robots.MyBot.Insight
             toProfit = CreateParameter("Забирать профит от %", 2, 0.5m, 50m, 0.5m, "Выхода");
             slippage = CreateParameter("Велич.проскаль.Стопа и профита ", 5, 1, 200, 5, "Ордеров");
             lengthStartStop = CreateParameter("стартовая (начальная) для стопа %", 2, 0.6m, 50m, 0.5m, "Выхода"); // стартовая (начальная) величина отступа для стоп приказа  в процентах от цены открытия позиции
+            lengthToPiramid = CreateParameter(" расстояние до пирамиды в %", 0.3m, 0.1m, 3, 0.1m, "Входные");
             vklRasCandl = CreateParameter("Считать стоп по свечам?", false, "Выхода");
             vklRasKauf = CreateParameter("Прибавить к стопу Волатильность?", false, "Выхода");
             TimeFrom = CreateParameter("время начала торговли роботом", 0, 0, 24, 1, "Входные"); // время начала торговли роботом
@@ -207,6 +208,11 @@ namespace OsEngine.Robots.MyBot.Insight
         private StrategyParameterDecimal coefficient; // коэффицент увеличения объема покупок 
         private StrategyParameterInt slippage; // величина проскальзывание при установки ордеров стоп и профит 
         private StrategyParameterDecimal lengthStartStop;// стартовая (начальная) величина отступа для стоп приказа  в процентах от цены открытия позиции
+
+        /// <summary>
+        /// растояние до пирмиды 
+        /// </summary>
+        private StrategyParameterDecimal lengthToPiramid;
         private StrategyParameterDecimal toProfit; // расстояние от цены до трейлинг стопа в %
         private StrategyParameterBool vklRasCandl; // включать ли расчет стопа по свечам
         private StrategyParameterBool vklRasKauf; // прибавлять в расчетах показание индикатора кауфмана - волотильности 
@@ -437,11 +443,19 @@ namespace OsEngine.Robots.MyBot.Insight
             }
             if (_tabSimple.PositionsOpenAll.Count != 0) // есть открытая позиция добираем объем
             {
+                if (Price > lineOpenPos)
+                {
+                    Piramiding();
+                }
                 decimal OpenVolume = 0;
                 OpenVolume = positions[0].MaxVolume; 
-                if (OpenVolume > VolumePosition || VolumeBigGamer == 0)// проверка набранного обема и наличие крупного объема 
+                if (OpenVolume > VolumePosition )// проверка набранного обема 
                 {
                     //SendTextView("обем позиции превышен "+ VolumePosition.ToString());
+                    return;
+                }
+                if ( VolumeBigGamer == 0) // наличие крупного объема 
+                {
                     return;
                 }
                 СalculationVolumPosInSecur(SecurityDecimals);
@@ -471,6 +485,45 @@ namespace OsEngine.Robots.MyBot.Insight
                 }
             }
 
+        }
+        /// <summary>
+        /// Добор обема позиции пирамидой
+        /// </summary>
+        private void Piramiding()
+        {
+            List<Position> positions = _tabSimple.PositionsOpenAll;
+            decimal OpenVolume = 0;
+            OpenVolume = positions[0].MaxVolume;
+ 
+            if (_cameBigCluster ==  true 
+                && positions.Count > 0 
+                && positions != null 
+                && OpenVolume != 0) // уже есть открытый обем 
+            {
+                if (OpenVolume < VolumePosition // если объем не набран
+                     && VolumeBigGamer != 0) // есть курупного есть
+                {
+                    decimal PricePiram = _startPriceRecPos + (Price / 100 * lengthToPiramid.ValueDecimal);
+                    int sumTred = 0;
+                    decimal PricLastTrade = 0;
+                    sumTred = positions[0].MyTrades.Count; // количество трейдов в позиции
+                    if (Price > PricePiram && sumTred < PartsInput.ValueInt && sumTred >= 1)
+                    {
+                        СalculationVolumPosInSecur(SecurityDecimals);
+ 
+                        if (sumTred != 0)
+                        {
+                            PricLastTrade = positions[0].MyTrades[sumTred - 1].Price; // цена последнего трейда позиции
+                            if (Price > PricePiram && Price > PricLastTrade+ PricePiram)
+                            {
+                                _tabSimple.BuyAtLimitToPosition(positions[0], PricePiram - SlipageOpenFirst.ValueInt * _tabSimple.Securiti.PriceStep, VolumePosition / PartsInput.ValueInt);
+                                //_tabSimple.BuyAtLimit(Volume.ValueDecimal / PartsInput.ValueInt, Price);
+                                //Thread.Sleep(1500);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         /// <summary>
