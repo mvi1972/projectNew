@@ -1689,9 +1689,6 @@
     <EmbeddedResource Include="Resources\OsEngine_logo_transpared.png" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="bin\Debug\Data\Set_Adatest\ADAUSDT\Min1\ADAUSDT.txt" />
-    <Resource Include="bin\Debug\Data\Set_Adatest\SecuritiesSettings.txt" />
-    <Resource Include="bin\Debug\Data\Set_Adatest\Settings.txt" />
     <Resource Include="bin\Debug\Data\Set_GALA Tick 5D\GALAUSDT\Min1\GALAUSDT.txt" />
     <Resource Include="bin\Debug\Data\Set_GALA Tick 5D\GALAUSDT\Min5\GALAUSDT.txt" />
     <Resource Include="bin\Debug\Data\Set_GALA Tick 5D\GALAUSDT\Tick\GALAUSDT.txt" />
