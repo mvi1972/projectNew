@@ -72,6 +72,8 @@ namespace OsEngine.Robots.MyBot.Insight
 
             _tabClusterSpotDelta.MaxSellLineChangeEvent += _tabClusterSpotDelta_MaxSellLineChangeEvent; // изменилась макс. линия Sell
 
+            _tabClusterSpotDelta.MaxBuyLineChangeEvent += _tabClusterSpotDelta_MaxBuyLineChangeEvent; // изменилась макс. линия Buy
+
             _tabSimple.CandleFinishedEvent += CandleFinishedEvent;
             _tabSimple.PositionOpeningSuccesEvent += _tab_PositionOpeningSuccesEvent; //событие открытия позиции
             _tabSimple.PositionOpeningFailEvent += _tab_PositionOpeningFailEvent; // ошибка открытия позиции
@@ -97,7 +99,7 @@ namespace OsEngine.Robots.MyBot.Insight
 
         }
 
-       #region ============== Свойства ====================================================
+        #region ============== Свойства ====================================================
         /// <summary>
         /// децимал бумаги
         /// </summary>
@@ -166,6 +168,14 @@ namespace OsEngine.Robots.MyBot.Insight
         /// объем сделки
         /// </summary>
         public decimal VolumePosition = 0;
+        /// <summary>
+        /// объем крупного 
+        /// </summary>
+        public decimal VolumeBigGamer = 0;
+        /// <summary>
+        /// объем максимальной  линии покупок
+        /// </summary>
+        decimal VolumeBigLineBuy = 0; // 
         public decimal DistLongInit;
         public decimal LongAdj;
         public decimal DistShortInit;
@@ -259,6 +269,7 @@ namespace OsEngine.Robots.MyBot.Insight
                 {
                     PriceLargeEntry = 0;
                     PriceLargeEntry = _priceMaxDeltaLineSell;   // записываем цену входа крупного объема,
+                    VolumeBigGamer = _volumeLineSell; // объем крупного 
                     _cameBigCluster = true;
                 }
 
@@ -278,6 +289,20 @@ namespace OsEngine.Robots.MyBot.Insight
             _priceMaxDeltaLineSell = Line.Price;  // цена наибольшей линии
             СameBigCluster(); // проверяет большой кластер 
             SendTextView("Изменился обЪем Макс линии " + _volumeLineSell.ToString());
+        }
+
+        /// <summary>
+        /// изменился максимальный обем линни покупок
+        /// </summary>
+        private void _tabClusterSpotDelta_MaxBuyLineChangeEvent(HorizontalVolumeLine line)
+        {
+            VolumeBigLineBuy = line.VolumeBuy;
+            if (VolumeBigLineBuy > VolumeBigGamer && _cameBigCluster == true) // проверка выхода большого обема (закрывающего)
+            {
+                VolumeBigGamer = 0;
+                _cameBigCluster = false;
+                SendTextView(" КРУПНЯК закрылся на " + VolumeBigLineBuy.ToString());
+            }
         }
         /// <summary>
         /// входящее событие о том что открылась некая сделка, выставляем стоп
@@ -392,8 +417,6 @@ namespace OsEngine.Robots.MyBot.Insight
         /// </summary> 
         private void RecruitingPosition(decimal _priceLargeEntry)
         {
-
-
             List<Position> positions = _tabSimple.PositionsOpenAll;
             if (_tabSimple.PositionsOpenAll.Count == 0) // нету открытых позиций
             {
@@ -403,7 +426,7 @@ namespace OsEngine.Robots.MyBot.Insight
                 _stepRecPos = (_startPriceRecPos - _stopPriceRecPos) / PartsInput.ValueInt;
                 lineOpenPos = _startPriceRecPos;
 
-                if (lineOpenPos == 0 || _startPriceRecPos == 0 || _stepRecPos == 0)
+                if (lineOpenPos == 0 || _startPriceRecPos == 0 || _stepRecPos == 0 || VolumeBigGamer==0)
                 {
                     return;
                 }
@@ -412,11 +435,11 @@ namespace OsEngine.Robots.MyBot.Insight
                     _tabSimple.BuyAtLimit(VolumePosition / PartsInput.ValueInt, lineOpenPos - SlipageOpenFirst.ValueInt * _tabSimple.Securiti.PriceStep);
                 }
             }
-            if (_tabSimple.PositionsOpenAll.Count != 0) // есть открытая позиция 
+            if (_tabSimple.PositionsOpenAll.Count != 0) // есть открытая позиция добираем объем
             {
                 decimal OpenVolume = 0;
-                OpenVolume = positions[0].MaxVolume;
-                if (OpenVolume > VolumePosition) // проверка набранного обема 
+                OpenVolume = positions[0].MaxVolume; 
+                if (OpenVolume > VolumePosition || VolumeBigGamer == 0)// проверка набранного обема и наличие крупного объема 
                 {
                     //SendTextView("обем позиции превышен "+ VolumePosition.ToString());
                     return;
@@ -447,6 +470,7 @@ namespace OsEngine.Robots.MyBot.Insight
                     //Thread.Sleep(1500);
                 }
             }
+
         }
 
         /// <summary>
@@ -534,6 +558,7 @@ namespace OsEngine.Robots.MyBot.Insight
             PriceLargeEntry = 0; // цена входа крупного объема 
             lineOpenPos = 0; //  обнуляем уровень входа
             VolumePosition = 0; // обем входа в позу
+            VolumeBigGamer = 0; 
         }
 
         /// <summary>
