@@ -21,7 +21,7 @@ namespace OsEngine.Robots.MyBot.Insight
 {
     public class Insight : BotPanel, INotifyPropertyChanged
     {
-        // сервис
+
         /// <summary>
         /// КОНСТРУКТОР 
         /// </summary>
@@ -97,65 +97,28 @@ namespace OsEngine.Robots.MyBot.Insight
 
         }
 
+       #region ============== Свойства ====================================================
         /// <summary>
-        /// взять имя робота
+        /// децимал бумаги
         /// </summary>
-        public override string GetNameStrategyType()
+        public int SecurityDecimals
         {
-            return "Insight";
+            get
+            {
+                //TabSimple.IsConnected &&
+                if (_tabSimple.IsConnected && _tabSimple.StartProgram == StartProgram.IsOsTrader)
+                {
+                    return _tabSimple.Securiti.DecimalsVolume;
+                }
+                if (_tabSimple.StartProgram == StartProgram.IsTester)
+                {
+                    return _tabSimple.Securiti.DecimalsVolume;
+                }
+                else return 3;
+            }
         }
-        /// <summary>
-        /// показать окно настроек робота
-        /// </summary>
-        public override void ShowIndividualSettingsDialog()
-        {
-            InsightUi ui = new InsightUi(this);
-            ui.Show();
-        }
 
-        /// <summary>
-        /// вкладка для торговли и кластеров 
-        /// </summary>
-        private BotTabSimple _tabSimple;
-        private BotTabCluster _tabClusterSpot;
-        private BotTabCluster _tabClusterSpotDelta;
-
-        /// <summary>
-        /// объем сделки
-        /// </summary>
-        public decimal VolumePosition;
-
-
-        /// <summary>
-        /// настройки на параметрах  
-        /// </summary>
-        private StrategyParameterBool IsOn; // включение робота
-        private StrategyParameterInt VolumeInBaks; // объем позиции в баксах
-        private StrategyParameterInt SlipageOpenFirst;// проскальзывание на открытие первый ордер
-        private StrategyParameterInt SlipageCloseFirst; // проскальзывание при 1м закрытии первый ордер
-        private StrategyParameterInt SlipageOpenSecond; // проскальзывание при 2 открытии
-        private StrategyParameterInt SlipageCloseSecond; // проскальзывание на 2 закрытии
-        private StrategyParameterInt TimeFrom;// время начала торговли роботом
-        private StrategyParameterInt TimeTo;// время завершения торговли роботом
-        private StrategyParameterInt PartsInput; // количество частей на вход в объем позиции 
-        private StrategyParameterDecimal PercentOnEntry; // на сколько процентов растягивать набор позиции
-
-        private StrategyParameterBool vklBigCluster; // использовать  объем большого 
-        private StrategyParameterInt bigvolume; // какой объем в кластере считать большим 
-        private StrategyParameterDecimal coefficient; // коэффицент увеличения объема покупок 
-        private StrategyParameterInt slippage; // величина проскальзывание при установки ордеров стоп и профит 
-        private StrategyParameterDecimal lengthStartStop;// стартовая (начальная) величина отступа для стоп приказа  в процентах от цены открытия позиции
-        private StrategyParameterDecimal toProfit; // расстояние от цены до трейлинг стопа в %
-        private StrategyParameterBool vklRasCandl; // включать ли расчет стопа по свечам
-        private StrategyParameterBool vklRasKauf; // прибавлять в расчетах показание индикатора кауфмана - волотильности 
-        private StrategyParameterTimeOfDay LagTimeToOpenClose; // количество секунд на исполнение ордеров, после чего они будут отзываться
-        private StrategyParameterInt LagPunctToOpenClose;// откат цены от цены ордера, после чего он будет отозван
-        private StrategyParameterInt SlipageReversClose;// обратное проскальзывание для цены активации стопОрдера на закрытии
-        private StrategyParameterInt SlipageReversOpen; // обратное проскальзывание для цены активации стопОрдера на открытии
-        private StrategyParameterInt BarOldPeriod;// количество свечей (периодов) за которые рассчитываем средний объем кластеров
-        private StrategyParameterButton windows;
-
-        // настройки публичные
+        public int _securityDecimals;
         /// <summary>
         /// поле для тестов 1
         /// </summary>
@@ -192,70 +155,480 @@ namespace OsEngine.Robots.MyBot.Insight
             get => _volumN;
             set => Set(ref _volumN, value);
         }
+
+        #endregion
+
+        #region ===================Поля ================================================
         public decimal stopBuy;
         public decimal stopSell;
         public decimal indent;
-
+        /// <summary>
+        /// объем сделки
+        /// </summary>
+        public decimal VolumePosition = 0;
         public decimal DistLongInit;
         public decimal LongAdj;
         public decimal DistShortInit;
         public decimal ShortAdj;
 
         /// <summary>
-        /// сохранить настройки в файл
+        /// вкладка для торговли и кластеров 
         /// </summary>
-        public void Save()
-        {
-            try
-            {
-                using (StreamWriter writer = new StreamWriter(@"Engine\" + NameStrategyUniq + @"SettingsBot.txt", false)
-                    )
-                {
-                    writer.WriteLine(DistLongInit);
-                    writer.WriteLine(LongAdj);
-                    writer.WriteLine(DistShortInit);
-                    writer.WriteLine(ShortAdj);
-                    writer.WriteLine(PriceLargeEntry);
+        private BotTabSimple _tabSimple;
+        private BotTabCluster _tabClusterSpot;
+        private BotTabCluster _tabClusterSpotDelta;
 
-                    writer.Close();
-                }
-            }
-            catch (Exception)
+        /// <summary>
+        /// настройки на параметрах  
+        /// </summary>
+        private StrategyParameterBool IsOn; // включение робота
+        private StrategyParameterInt VolumeInBaks; // объем позиции в баксах
+        private StrategyParameterInt SlipageOpenFirst;// проскальзывание на открытие первый ордер
+        private StrategyParameterInt SlipageCloseFirst; // проскальзывание при 1м закрытии первый ордер
+        private StrategyParameterInt SlipageOpenSecond; // проскальзывание при 2 открытии
+        private StrategyParameterInt SlipageCloseSecond; // проскальзывание на 2 закрытии
+        private StrategyParameterInt TimeFrom;// время начала торговли роботом
+        private StrategyParameterInt TimeTo;// время завершения торговли роботом
+        private StrategyParameterInt PartsInput; // количество частей на вход в объем позиции 
+        private StrategyParameterDecimal PercentOnEntry; // на сколько процентов растягивать набор позиции
+
+        private StrategyParameterBool vklBigCluster; // использовать  объем большого 
+        private StrategyParameterInt bigvolume; // какой объем в кластере считать большим 
+        private StrategyParameterDecimal coefficient; // коэффицент увеличения объема покупок 
+        private StrategyParameterInt slippage; // величина проскальзывание при установки ордеров стоп и профит 
+        private StrategyParameterDecimal lengthStartStop;// стартовая (начальная) величина отступа для стоп приказа  в процентах от цены открытия позиции
+        private StrategyParameterDecimal toProfit; // расстояние от цены до трейлинг стопа в %
+        private StrategyParameterBool vklRasCandl; // включать ли расчет стопа по свечам
+        private StrategyParameterBool vklRasKauf; // прибавлять в расчетах показание индикатора кауфмана - волотильности 
+        private StrategyParameterTimeOfDay LagTimeToOpenClose; // количество секунд на исполнение ордеров, после чего они будут отзываться
+        private StrategyParameterInt LagPunctToOpenClose;// откат цены от цены ордера, после чего он будет отозван
+        private StrategyParameterInt SlipageReversClose;// обратное проскальзывание для цены активации стопОрдера на закрытии
+        private StrategyParameterInt SlipageReversOpen; // обратное проскальзывание для цены активации стопОрдера на открытии
+        private StrategyParameterInt BarOldPeriod;// количество свечей (периодов) за которые рассчитываем средний объем кластеров
+        private StrategyParameterButton windows;
+        #endregion
+
+        #region ====================== Логика ============================
+
+        public void ClosePosicion() // закрытие всех позиций по маркету 
+        {
+            if (_tabSimple.PositionsOpenAll.Count != 0)
             {
-                // отправить в лог
+                _tabSimple.CloseAllAtMarket();
             }
         }
 
         /// <summary>
-        /// загрузить настройки из файла
+        /// вычисляет средний объем за определенный период 
         /// </summary>
-        private void Load()
+        private void AverageVolumePeriod(int period)
         {
-            if (!File.Exists(@"Engine\" + NameStrategyUniq + @"SettingsBot.txt"))
+            if (_tabClusterSpot.VolumeClusters.Count < BarOldPeriod.ValueInt + 2) // защита от отсутствия необходимых данных
             {
                 return;
             }
-            try
-            {
-                using (StreamReader reader = new StreamReader(@"Engine\" + NameStrategyUniq + @"SettingsBot.txt"))
-                {
-                    DistLongInit = Convert.ToDecimal(reader.ReadLine());
-                    LongAdj = Convert.ToDecimal(reader.ReadLine());
-                    DistShortInit = Convert.ToDecimal(reader.ReadLine());
-                    ShortAdj = Convert.ToDecimal(reader.ReadLine());
-                    PriceLargeEntry = Convert.ToDecimal(reader.ReadLine());
+            decimal volumBackPeriod = 0; // объем за период, обнуляем в начале
 
-                    reader.Close();
-                }
-            }
-            catch (Exception)
+            int startIndex = _tabClusterSpot.VolumeClusters.Count - 2;
+            int endIndex = _tabClusterSpot.VolumeClusters.Count - 2 - period;
+
+            for (int i = startIndex; i > endIndex; i--)
             {
-                // отправить в лог
+                HorizontalVolumeCluster clasterPeriod = _tabClusterSpot.VolumeClusters[i]; // объём  в кластере
+                HorizontalVolumeLine vol = clasterPeriod.MaxSummVolumeLine; // линия с максимальным объемом
+                volumBackPeriod += vol.VolumeSumm; // суммируем за весь период
+            }
+            decimal zn = Okruglenie(volumBackPeriod / period, 4); // вычисляем среднее и
+            AverageVolumeBaсk = zn;                              // отправляем данные в переменную например 
+        }
+
+        decimal _volumeLineSell = 0; // объем максимальной  линии продаж
+        public decimal _priceMaxDeltaLineSell; // цена наибольшей линии
+        public bool _cameBigCluster = false; // вошел крупный
+        /// <summary>
+        /// смотрит пришла ли (есть) большая линия дельта (кластер)
+        /// </summary>
+        private void СameBigCluster()
+        {
+            if (AverageVolumeBaсk != 0 && // среднее значение не нуль и
+                _volumeLineSell != 0 &&  // максимальная линия не пуста и
+                AverageVolumeBaсk * coefficient.ValueDecimal < _volumeLineSell || // MaxSellLine больше средней * коэф или
+                bigvolume.ValueInt < _volumeLineSell && vklBigCluster.ValueBool == true)
+            {
+                if (_cameBigCluster != true)
+                {
+                    PriceLargeEntry = 0;
+                    PriceLargeEntry = _priceMaxDeltaLineSell;   // записываем цену входа крупного объема,
+                    _cameBigCluster = true;
+                }
+
+                string strokPrint = "Цена входа КРУПНОГО = " + PriceLargeEntry.ToString() + "\n";
+                Debug.WriteLine(strokPrint);
+            }
+            else _cameBigCluster = false;
+        }
+
+        /// <summary>
+        /// изменилась линия объёма максимальным суммарным объёмом Sell тут ждем MaxSellLine больше средней * коэф
+        /// </summary>
+        private void _tabClusterSpotDelta_MaxSellLineChangeEvent(HorizontalVolumeLine Line)
+        {
+            AverageVolumePeriod(BarOldPeriod.ValueInt);// запускаю расчет средней 
+            _volumeLineSell = Line.VolumeSell; // суммарный объем продаж линии
+            _priceMaxDeltaLineSell = Line.Price;  // цена наибольшей линии
+            СameBigCluster(); // проверяет большой кластер 
+            SendTextView("Изменился обЪем Макс линии " + _volumeLineSell.ToString());
+        }
+        /// <summary>
+        /// входящее событие о том что открылась некая сделка, выставляем стоп
+        /// </summary>
+        void _tab_PositionOpeningSuccesEvent(Position position)
+        {
+            _tabSimple.BuyAtStopCancel();
+            _tabSimple.SellAtStopCancel();
+
+            // выставляем стоп по отступу в обход вызова из метода окончания свечи
+            indent = lengthStartStop.ValueDecimal * Price / 100;  // отступ для стопа
+            decimal priceOpenPos = _tabSimple.PositionsLast.EntryPrice;  // цена открытия позиции
+
+            if (position.Direction == Side.Buy)
+            {
+                stopBuy = Math.Round(priceOpenPos - indent, _tabSimple.Securiti.Decimals);
+                decimal lineSell = priceOpenPos - indent;
+
+                decimal priceOrderSell = lineSell - _tabSimple.Securiti.PriceStep * SlipageCloseFirst.ValueInt;
+                decimal priceRedLineSell = lineSell + _tabSimple.Securiti.PriceStep * SlipageReversClose.ValueInt;
+
+                if (priceRedLineSell - _tabSimple.Securiti.PriceStep * SlipageReversClose.ValueInt > _tabSimple.PriceBestAsk)
+                {
+                    _tabSimple.CloseAtLimit(position, _tabSimple.PriceBestAsk, position.OpenVolume);
+                    return;
+                }
+
+                if (position.StopOrderPrice == 0 ||
+                    position.StopOrderPrice < priceRedLineSell)
+                {
+                    _tabSimple.CloseAtStop(position, stopBuy, priceOrderSell);
+                }
+
+                if (position.StopOrderIsActiv == false)
+                {
+                    if (position.StopOrderRedLine - _tabSimple.Securiti.PriceStep * SlipageCloseFirst.ValueInt > _tabSimple.PriceBestAsk)
+                    {
+                        _tabSimple.CloseAtLimit(position, _tabSimple.PriceBestAsk, position.OpenVolume);
+                        return;
+                    }
+                    position.StopOrderIsActiv = true;
+                }
             }
         }
 
-        // логика открытия позиции
+        /// <summary>
+        /// основной вход в логику робота. Вызывается когда завершилась свеча (логика роботы робота)
+        /// </summary>
+        void CandleFinishedEvent(List<Candle> candles)
+        {
+            if (IsOn.ValueBool == false)
+            {
+                return;
+            }
 
+            TryOpenPosition(); // разрешено  открывать
+
+            List<Position> positions = _tabSimple.PositionsOpenAll;
+
+            DateTime lastTradeTime = candles[candles.Count - 1].TimeStart;  // берем время закрытия последней свечи
+
+            if (positions != null && positions.Count != 0)
+            {
+                TryClosePosition(positions[0], candles);
+                Min_loss();
+            }
+            /*else
+            {
+                TryOpenPosition(); // разрешено  открывать позу (candles)
+            }*/
+        }
+        /// <summary>
+        /// все условия для входа в позицию соблюдены - входим 
+        /// </summary>
+        private void TryOpenPosition()  // (List<Candle> candles)
+        {
+            Big = PriceLargeEntry;    // для теста вывожу в окно 
+
+            if (PriceLargeEntry != 0)
+            {
+                RecruitingPosition(PriceLargeEntry);
+            }
+        }
+
+        /// <summary>
+        ///  расчет объема позиции в валюте
+        /// </summary>
+        private void СalculationVolumPosInSecur(int DecimalsVolume)
+        {
+            if (_tabSimple.StartProgram == StartProgram.IsTester)
+            {
+                VolumePosition = 1;
+            }
+            if (_tabSimple.StartProgram == StartProgram.IsOsTrader)
+            {
+                VolumePosition = 0;
+                decimal zna = VolumeInBaks.ValueInt;
+                VolumePosition = Okruglenie(zna / Price, DecimalsVolume);
+                string str = "VolumePosition = " + VolumePosition.ToString() + "\n";
+                Debug.WriteLine(str);
+            }
+        }
+
+        decimal _startPriceRecPos = 0; // цена начала набора позиции
+        decimal _stopPriceRecPos = 0;  // цена окончания набора
+        decimal _stepRecPos = 0; // шаг набора 
+        public decimal PriceLargeEntry = 0; //цена входа крупного
+        public decimal lineOpenPos = 0; // уровень входа
+
+        /// <summary>
+        /// набираем позицию 
+        /// </summary> 
+        private void RecruitingPosition(decimal _priceLargeEntry)
+        {
+
+
+            List<Position> positions = _tabSimple.PositionsOpenAll;
+            if (_tabSimple.PositionsOpenAll.Count == 0) // нету открытых позиций
+            {
+                СalculationVolumPosInSecur(SecurityDecimals);
+                _startPriceRecPos = _priceLargeEntry;
+                _stopPriceRecPos = _startPriceRecPos - (_priceLargeEntry / 100 * PercentOnEntry.ValueDecimal);
+                _stepRecPos = (_startPriceRecPos - _stopPriceRecPos) / PartsInput.ValueInt;
+                lineOpenPos = _startPriceRecPos;
+
+                if (lineOpenPos == 0 || _startPriceRecPos == 0 || _stepRecPos == 0)
+                {
+                    return;
+                }
+                if (Price < lineOpenPos)
+                {
+                    _tabSimple.BuyAtLimit(VolumePosition / PartsInput.ValueInt, lineOpenPos - SlipageOpenFirst.ValueInt * _tabSimple.Securiti.PriceStep);
+                }
+            }
+            if (_tabSimple.PositionsOpenAll.Count != 0) // есть открытая позиция 
+            {
+                decimal OpenVolume = 0;
+                OpenVolume = positions[0].MaxVolume;
+                if (OpenVolume > VolumePosition) // проверка набранного обема 
+                {
+                    //SendTextView("обем позиции превышен "+ VolumePosition.ToString());
+                    return;
+                }
+                СalculationVolumPosInSecur(SecurityDecimals);
+                decimal openPos = 0;
+                int sumTred = 0;
+                sumTred = positions[0].MyTrades.Count; // количество трейдов в позиции
+                if (sumTred != 0)
+                {
+                    openPos = positions[0].MyTrades[sumTred - 1].Price; // цена последнего трейда позиции
+                    //_tabSimple.PositionsLast.MyTrades[sumTred - 1].Price; // цена последнего трейда 
+                }
+                if (openPos == 0 || _stepRecPos == 0)
+                {
+                    return;
+                }
+                decimal lineAddnPos = openPos - _stepRecPos;
+
+                if (Price < _stopPriceRecPos || sumTred >= PartsInput.ValueInt)
+                {
+                    return;     //чтобы больше не покупать 
+                }
+                if (Price < lineAddnPos && sumTred < PartsInput.ValueInt && sumTred >= 1)
+                {
+                    _tabSimple.BuyAtLimitToPosition(positions[0], lineAddnPos - SlipageOpenFirst.ValueInt * _tabSimple.Securiti.PriceStep, VolumePosition / PartsInput.ValueInt);
+                    //_tabSimple.BuyAtLimit(Volume.ValueDecimal / PartsInput.ValueInt, Price);
+                    //Thread.Sleep(1500);
+                }
+            }
+        }
+
+        /// <summary>
+        /// проверить условия на выход из позиции - пересчитываются стоп ордера
+        /// </summary> 
+        private void TryClosePosition(Position position, List<Candle> candles) // тут пересчитываются стоп ордера 
+        {
+            if (position.Direction == Side.Buy)
+            {
+                if (vklRasCandl.ValueBool == false)
+                {
+                    return;
+                }
+                decimal lineSell = GetPriceToStopOrder(position.TimeCreate, position.Direction, candles, candles.Count - 1);
+
+                if (lineSell == 0)
+                {
+                    return;
+                }
+
+                decimal priceOrderSell = lineSell - _tabSimple.Securiti.PriceStep * SlipageCloseFirst.ValueInt; // ЗДЕСЬ!!!!!!!!!!!!!!
+                decimal priceRedLineSell = lineSell + _tabSimple.Securiti.PriceStep * SlipageReversClose.ValueInt;
+
+                if (priceRedLineSell - _tabSimple.Securiti.PriceStep * slippage.ValueInt > _tabSimple.PriceBestAsk)
+                {
+                    _tabSimple.CloseAtLimit(position, _tabSimple.PriceBestAsk, position.OpenVolume);
+                    return;
+                }
+
+                if (position.StopOrderPrice == 0 ||
+                    position.StopOrderPrice < priceRedLineSell)
+                {
+                    _tabSimple.CloseAtStop(position, priceRedLineSell, priceOrderSell);
+                }
+
+                if (position.StopOrderIsActiv == false)
+                {
+                    if (position.StopOrderRedLine - _tabSimple.Securiti.PriceStep * slippage.ValueInt > _tabSimple.PriceBestAsk)
+                    {
+                        _tabSimple.CloseAtLimit(position, _tabSimple.PriceBestAsk, position.OpenVolume);
+                        return;
+                    }
+                    position.StopOrderIsActiv = true;
+                }
+            }
+        }
+
+        /// <summary>
+        /// событие - пришел новый стакан
+        /// </summary>
+        private void _tab_MarketDepthUpdateEvent(MarketDepth marketDepth)
+        {
+            if (_tabSimple.IsConnected == false)
+            {
+                return;
+            }
+        }
+
+        /// <summary>
+        /// ТЕСТИРУЮ ПЕРЕМЕННЫЕ ТУТ !! (происходит с каждым новым тиком в системе) 
+        /// </summary>
+        void _tab_NewTickEvent(Trade trade)
+        {
+            // для теста
+            TryOpenPosition();
+            // !!!!! тут присвоение для теста 
+            Test = lineOpenPos;
+
+            Price = trade.Price;
+
+            ChekReActivator(trade);
+
+            if (_tabSimple.PositionsOpenAll.Count != 0) // если есть позиция
+            {
+                To_stop_profit(); // включает трейлинг стоп 
+                Min_loss();
+            }
+        }
+
+        /// <summary>
+        /// закрылась позиция обнуляем входные данные 
+        /// </summary>
+        private void _tab_PositionClosingSuccesEvent(Position position)
+        {
+            PriceLargeEntry = 0; // цена входа крупного объема 
+            lineOpenPos = 0; //  обнуляем уровень входа
+            VolumePosition = 0; // обем входа в позу
+        }
+
+        /// <summary>
+        /// для сдвига стопа  
+        /// </summary>
+        public void Min_loss()
+        {
+            indent = lengthStartStop.ValueDecimal * Price / 100;  // отступ для стопа
+            decimal priceOpenPos = 0; // цена открытия позиции
+
+            if (_tabSimple.PositionsOpenAll.Count != 0)
+            {
+                priceOpenPos = _tabSimple.PositionsLast.EntryPrice;
+            }
+            if (priceOpenPos == 0)
+            {
+                return;
+            }
+            if (_tabSimple.PositionsLast.Direction == Side.Buy)
+            {
+                if (Price < priceOpenPos)
+                {
+                    return;
+                }
+
+                if (priceOpenPos + indent < Price) // если цена выросла  больше допустимого стопа переносим стоп сделки в безубыток
+                {
+                    stopBuy = priceOpenPos + indent;
+                }
+            }
+        }
+
+        public bool dinamik;
+        /// <summary>
+        /// для движения трлейлинг стопа  
+        /// </summary>
+        public void To_stop_profit()
+        {
+            decimal priceOpenPos = 0; // цена открытия позиции
+
+            if (vklRasKauf.ValueBool == true)
+            {
+                dinamik = true;
+            }
+            else
+            {
+                dinamik = false;
+            }
+            if (_tabSimple.PositionsOpenAll.Count != 0)
+            {
+                priceOpenPos = _tabSimple.PositionsLast.EntryPrice;
+            }
+            if (priceOpenPos == 0)
+            {
+                return;
+            }
+            decimal komis = Price / 100 * 0.04m;
+            if (_tabSimple.PositionsLast.Direction == Side.Buy)
+            {
+                if (Price < priceOpenPos)
+                {
+                    return;
+                }
+                decimal stopActivacion = Price - Price * (lengthStartStop.ValueDecimal / 100);
+                decimal stopOrderPrice = stopActivacion - slippage.ValueInt * _tabSimple.Securiti.PriceStep;
+                if (stopActivacion < priceOpenPos + komis) // пока стоп ниже безубытка , поднимаем его
+                {
+                    stopActivacion = Price - Price * (lengthStartStop.ValueDecimal / 100);
+                    _tabSimple.CloseAtTrailingStop(_tabSimple.PositionsLast, stopActivacion, stopOrderPrice);
+                    stopBuy = stopActivacion;
+                    //SendTextView("Стоп цена = " + stopBuy.ToString());
+                }
+                // когда стоп выше безубытка позиции
+                if (Price > priceOpenPos + komis + Price * (toProfit.ValueDecimal / 100))
+                {
+                    if (vklRasKauf.ValueBool == true)    // динамика
+                    {
+                        stopActivacion = Price - Price * ((toProfit.ValueDecimal) / 100);
+                        stopOrderPrice = stopActivacion - slippage.ValueInt * _tabSimple.Securiti.PriceStep;
+                        _tabSimple.CloseAtTrailingStop(_tabSimple.PositionsLast, stopActivacion, stopOrderPrice);
+                        stopBuy = stopActivacion;
+                    }
+                    else
+                    {
+                        stopActivacion = Price - Price * (toProfit.ValueDecimal / 100);
+                        stopOrderPrice = stopActivacion - slippage.ValueInt * _tabSimple.Securiti.PriceStep;
+                        _tabSimple.CloseAtTrailingStop(_tabSimple.PositionsLast, stopActivacion, stopOrderPrice);
+                        stopBuy = stopActivacion;
+                    }
+                }
+            }
+        }
+        #endregion
+
+        #region ==================== Сопровождение позицмй ======================================
         void _tab_PositionOpeningFailEvent(Position position)
         {
             if (!string.IsNullOrWhiteSpace(position.Comment)) // если есть комментарий 
@@ -389,349 +762,6 @@ namespace OsEngine.Robots.MyBot.Insight
                 }
             }
         }
-
-        /// <summary>
-        /// входящее событие о том что открылась некая сделка, выставляем стоп
-        /// </summary>
-        void _tab_PositionOpeningSuccesEvent(Position position)
-        {
-            _tabSimple.BuyAtStopCancel();
-            _tabSimple.SellAtStopCancel();
-
-            // выставляем стоп по отступу в обход вызова из метода окончания свечи
-            indent = lengthStartStop.ValueDecimal * Price / 100;  // отступ для стопа
-            decimal priceOpenPos = _tabSimple.PositionsLast.EntryPrice;  // цена открытия позиции
-
-            if (position.Direction == Side.Buy)
-            {
-                stopBuy = Math.Round(priceOpenPos - indent, _tabSimple.Securiti.Decimals);
-                decimal lineSell = priceOpenPos - indent;
-
-                decimal priceOrderSell = lineSell - _tabSimple.Securiti.PriceStep * SlipageCloseFirst.ValueInt;
-                decimal priceRedLineSell = lineSell + _tabSimple.Securiti.PriceStep * SlipageReversClose.ValueInt;
-
-                if (priceRedLineSell - _tabSimple.Securiti.PriceStep * SlipageReversClose.ValueInt > _tabSimple.PriceBestAsk)
-                {
-                    _tabSimple.CloseAtLimit(position, _tabSimple.PriceBestAsk, position.OpenVolume);
-                    return;
-                }
-
-                if (position.StopOrderPrice == 0 ||
-                    position.StopOrderPrice < priceRedLineSell)
-                {
-                    _tabSimple.CloseAtStop(position, stopBuy, priceOrderSell);
-                }
-
-                if (position.StopOrderIsActiv == false)
-                {
-                    if (position.StopOrderRedLine - _tabSimple.Securiti.PriceStep * SlipageCloseFirst.ValueInt > _tabSimple.PriceBestAsk)
-                    {
-                        _tabSimple.CloseAtLimit(position, _tabSimple.PriceBestAsk, position.OpenVolume);
-                        return;
-                    }
-                    position.StopOrderIsActiv = true;
-                }
-            }
-        }
-
-        /// <summary>
-        /// основной вход в логику робота. Вызывается когда завершилась свеча (логика роботы робота)
-        /// </summary>
-        void CandleFinishedEvent(List<Candle> candles)
-        {
-            if (IsOn.ValueBool == false)
-            {
-                return;
-            }
-
-            TryOpenPosition(); // разрешено  открывать
-
-            List<Position> positions = _tabSimple.PositionsOpenAll;
-
-            DateTime lastTradeTime = candles[candles.Count - 1].TimeStart;  // берем время закрытия последней свечи
-
-            if (positions != null && positions.Count != 0)
-            {
-                TryClosePosition(positions[0], candles);
-                Min_loss();
-            }
-            /*else
-            {
-                TryOpenPosition(); // разрешено  открывать позу (candles)
-            }*/
-        }
-        /// <summary>
-        /// все условия для входа в позицию соблюдены - входим 
-        /// </summary>
-        private void TryOpenPosition()  // (List<Candle> candles)
-        {
-            Big = PriceLargeEntry;    // для теста вывожу в окно 
-
-            if (PriceLargeEntry != 0)
-            {
-                RecruitingPosition(PriceLargeEntry);
-            }
-        }
-
-        /// <summary>
-        ///  расчет объема позиции в валюте
-        /// </summary>
-        private void СalculationVolumPosInSecur(int DecimalsVolume)
-        {
-            if (_tabSimple.StartProgram == StartProgram.IsTester)
-            {
-                VolumePosition = 1;
-            }
-            if (_tabSimple.StartProgram == StartProgram.IsOsTrader)
-            {
-                decimal zna = VolumeInBaks.ValueInt;
-                VolumePosition = Okruglenie(zna / Price, DecimalsVolume);
-                string str = "VolumePosition = " + VolumePosition.ToString() + "\n";
-                Debug.WriteLine(str);
-            }
-        }
-
-        decimal _startPriceRecPos = 0; // цена начала набора позиции
-        decimal _stopPriceRecPos = 0;  // цена окончания набора
-        decimal _stepRecPos = 0; // шаг набора 
-        public decimal PriceLargeEntry = 0; //цена входа крупного
-        public decimal lineOpenPos = 0; // уровень входа
-
-        /// <summary>
-        /// набираем позицию 
-        /// </summary> 
-        private void RecruitingPosition(decimal _priceLargeEntry)
-        {
-            List<Position> positions = _tabSimple.PositionsOpenAll;
-            if (_tabSimple.PositionsOpenAll.Count == 0) // нету открытых позиций
-            {
-                _startPriceRecPos = _priceLargeEntry;
-                _stopPriceRecPos = _startPriceRecPos - (_priceLargeEntry / 100 * PercentOnEntry.ValueDecimal);
-                _stepRecPos = (_startPriceRecPos - _stopPriceRecPos) / PartsInput.ValueInt;
-                lineOpenPos = _startPriceRecPos - _stepRecPos;
-
-                if (lineOpenPos == 0 || _startPriceRecPos == 0 || _stepRecPos == 0)
-                {
-                    return;
-                }
-                if (Price < lineOpenPos)
-                {
-                    _tabSimple.BuyAtLimit(VolumePosition / PartsInput.ValueInt, lineOpenPos - SlipageOpenFirst.ValueInt * _tabSimple.Securiti.PriceStep);
-                }
-                if (_priceLargeEntry > bigvolume.ValueInt)
-                {
-                    _tabSimple.BuyAtLimit(VolumePosition / PartsInput.ValueInt, lineOpenPos - SlipageOpenFirst.ValueInt * _tabSimple.Securiti.PriceStep);
-                }
-
-            }
-            if (_tabSimple.PositionsOpenAll.Count != 0) // есть открытая позиция 
-            {
-                decimal openPos = 0;
-                int sumTred = 0;
-                sumTred = positions[0].MyTrades.Count; // количество трейдов в позиции
-                if (sumTred != 0)
-                {
-                    openPos = positions[0].MyTrades[sumTred - 1].Price; // цена последнего трейда позиции
-                    //_tabSimple.PositionsLast.MyTrades[sumTred - 1].Price; // цена последнего трейда 
-                }
-                if (openPos == 0 || _stepRecPos == 0)
-                {
-                    return;
-                }
-                decimal lineAddnPos = openPos - _stepRecPos;
-
-                if (Price < _stopPriceRecPos || sumTred >= PartsInput.ValueInt)
-                {
-                    return;     //чтобы больше не покупать 
-                }
-                if (Price < lineAddnPos && sumTred < PartsInput.ValueInt && sumTred >= 1)
-                {
-                    _tabSimple.BuyAtLimitToPosition(positions[0], lineAddnPos - SlipageOpenFirst.ValueInt * _tabSimple.Securiti.PriceStep, VolumePosition / PartsInput.ValueInt);
-                    //_tabSimple.BuyAtLimit(Volume.ValueDecimal / PartsInput.ValueInt, Price);
-                    //Thread.Sleep(1500);
-                }
-            }
-        }
-
-        /// <summary>
-        /// проверить условия на выход из позиции - пересчитываются стоп ордера
-        /// </summary> 
-        private void TryClosePosition(Position position, List<Candle> candles) // тут пересчитываются стоп ордера 
-        {
-            if (position.Direction == Side.Buy)
-            {
-                if (vklRasCandl.ValueBool == false)
-                {
-                    return;
-                }
-                decimal lineSell = GetPriceToStopOrder(position.TimeCreate, position.Direction, candles, candles.Count - 1);
-
-                if (lineSell == 0)
-                {
-                    return;
-                }
-
-                decimal priceOrderSell = lineSell - _tabSimple.Securiti.PriceStep * SlipageCloseFirst.ValueInt; // ЗДЕСЬ!!!!!!!!!!!!!!
-                decimal priceRedLineSell = lineSell + _tabSimple.Securiti.PriceStep * SlipageReversClose.ValueInt;
-
-                if (priceRedLineSell - _tabSimple.Securiti.PriceStep * slippage.ValueInt > _tabSimple.PriceBestAsk)
-                {
-                    _tabSimple.CloseAtLimit(position, _tabSimple.PriceBestAsk, position.OpenVolume);
-                    return;
-                }
-
-                if (position.StopOrderPrice == 0 ||
-                    position.StopOrderPrice < priceRedLineSell)
-                {
-                    _tabSimple.CloseAtStop(position, priceRedLineSell, priceOrderSell);
-                }
-
-                if (position.StopOrderIsActiv == false)
-                {
-                    if (position.StopOrderRedLine - _tabSimple.Securiti.PriceStep * slippage.ValueInt > _tabSimple.PriceBestAsk)
-                    {
-                        _tabSimple.CloseAtLimit(position, _tabSimple.PriceBestAsk, position.OpenVolume);
-                        return;
-                    }
-                    position.StopOrderIsActiv = true;
-                }
-            }
-        }
-
-        /// <summary>
-        /// событие - пришел новый стакан
-        /// </summary>
-        private void _tab_MarketDepthUpdateEvent(MarketDepth marketDepth)
-        {
-            if (_tabSimple.IsConnected == false)
-            {
-                return;
-            }
-        }
-
-        /// <summary>
-        /// ТЕСТИРУЮ ПЕРЕМЕННЫЕ ТУТ !! (происходит с каждым новым тиком в системе) 
-        /// </summary>
-        void _tab_NewTickEvent(Trade trade)
-        {
-            // для теста
-            TryOpenPosition();
-            // !!!!! тут присвоение для теста 
-            Test = lineOpenPos;
-
-            Price = trade.Price;
-
-            ChekReActivator(trade);
-
-            if (_tabSimple.PositionsOpenAll.Count != 0) // если есть позиция
-            {
-                To_stop_profit(); // включает трейлинг стоп 
-                Min_loss();
-            }
-        }
-
-        // логика закрытия 
-
-        /// <summary>
-        /// закрылась позиция обнуляем входные данные 
-        /// </summary>
-        private void _tab_PositionClosingSuccesEvent(Position position)
-        {
-            PriceLargeEntry = 0; // цена входа крупного объема 
-            lineOpenPos = 0; //  обнуляем уровень входа
-        }
-
-        /// <summary>
-        /// для сдвига стопа  
-        /// </summary>
-        public void Min_loss()
-        {
-            indent = lengthStartStop.ValueDecimal * Price / 100;  // отступ для стопа
-            decimal priceOpenPos = 0; // цена открытия позиции
-
-            if (_tabSimple.PositionsOpenAll.Count != 0)
-            {
-                priceOpenPos = _tabSimple.PositionsLast.EntryPrice;
-            }
-            if (priceOpenPos == 0)
-            {
-                return;
-            }
-            if (_tabSimple.PositionsLast.Direction == Side.Buy)
-            {
-                if (Price < priceOpenPos)
-                {
-                    return;
-                }
-
-                if (priceOpenPos + indent < Price) // если цена выросла  больше допустимого стопа переносим стоп сделки в безубыток
-                {
-                    stopBuy = priceOpenPos + indent;
-                }
-            }
-        }
-
-        public bool dinamik;
-        /// <summary>
-        /// для движения трлейлинг стопа  
-        /// </summary>
-        public void To_stop_profit()
-        {
-            decimal priceOpenPos = 0; // цена открытия позиции
-
-            if (vklRasKauf.ValueBool == true)
-            {
-                dinamik = true;
-            }
-            else
-            {
-                dinamik = false;
-            }
-            if (_tabSimple.PositionsOpenAll.Count != 0)
-            {
-                priceOpenPos = _tabSimple.PositionsLast.EntryPrice;
-            }
-            if (priceOpenPos == 0)
-            {
-                return;
-            }
-            decimal komis = Price / 100 * 0.04m;
-            if (_tabSimple.PositionsLast.Direction == Side.Buy)
-            {
-                if (Price < priceOpenPos)
-                {
-                    return;
-                }
-                decimal stopActivacion = Price - Price * (lengthStartStop.ValueDecimal / 100);
-                decimal stopOrderPrice = stopActivacion - slippage.ValueInt * _tabSimple.Securiti.PriceStep;
-                if (stopActivacion < priceOpenPos + komis) // пока стоп ниже безубытка , поднимаем его
-                {
-                    stopActivacion = Price - Price * (lengthStartStop.ValueDecimal / 100);
-                    _tabSimple.CloseAtTrailingStop(_tabSimple.PositionsLast, stopActivacion, stopOrderPrice);
-                    stopBuy = stopActivacion;
-                    SendTextView("Стоп цена = "+ stopBuy.ToString());
-                }
-                // когда стоп выше безубытка позиции
-                if (Price > priceOpenPos + komis + Price * (toProfit.ValueDecimal / 100))
-                {
-                       if (vklRasKauf.ValueBool == true)    // динамика
-                    {
-                        stopActivacion = Price - Price * ((toProfit.ValueDecimal ) / 100);
-                        stopOrderPrice = stopActivacion - slippage.ValueInt * _tabSimple.Securiti.PriceStep;
-                        _tabSimple.CloseAtTrailingStop(_tabSimple.PositionsLast, stopActivacion, stopOrderPrice);
-                        stopBuy = stopActivacion;
-                    }
-                    else
-                    {
-                        stopActivacion = Price - Price * (toProfit.ValueDecimal / 100);
-                        stopOrderPrice = stopActivacion - slippage.ValueInt * _tabSimple.Securiti.PriceStep;
-                        _tabSimple.CloseAtTrailingStop(_tabSimple.PositionsLast, stopActivacion, stopOrderPrice);
-                        stopBuy = stopActivacion;
-                    }
-                }
-            }
-        }
-
         /// <summary>
         /// получить (берем) цену для выхода из позиции
         /// </summary>
@@ -794,7 +824,7 @@ namespace OsEngine.Robots.MyBot.Insight
                     else
                     {
                         distanse = DistLongInit;
-   
+
                         {
                             distanse -= 2.0m * LongAdj;
                         }
@@ -803,8 +833,8 @@ namespace OsEngine.Robots.MyBot.Insight
 
                 // 3 рассчитываем цену Стопа
                 Min_loss();  // расчет стопа
- 
-                decimal stopCandel = maxHigh ; // стоп рассчитываемый по свечам
+
+                decimal stopCandel = maxHigh; // стоп рассчитываемый по свечам
                 if (stopCandel < stopBuy)
                 {
                     return stopBuy;
@@ -1140,76 +1170,79 @@ namespace OsEngine.Robots.MyBot.Insight
             }
         }
 
-        public void ClosePosicion() // закрытие всех позиций по маркету 
+
+        #endregion
+
+        #region ================= Сервис =============================================
+        /// <summary>
+        /// сохранить настройки в файл
+        /// </summary>
+        public void Save()
         {
-            if (_tabSimple.PositionsOpenAll.Count != 0)
+            try
             {
-                _tabSimple.CloseAllAtMarket();
+                using (StreamWriter writer = new StreamWriter(@"Engine\" + NameStrategyUniq + @"SettingsBot.txt", false)
+                    )
+                {
+                    writer.WriteLine(DistLongInit);
+                    writer.WriteLine(LongAdj);
+                    writer.WriteLine(DistShortInit);
+                    writer.WriteLine(ShortAdj);
+                    writer.WriteLine(PriceLargeEntry);
+
+                    writer.Close();
+                }
+            }
+            catch (Exception)
+            {
+                // отправить в лог
             }
         }
 
         /// <summary>
-        /// вычисляет средний объем за определенный период 
+        /// загрузить настройки из файла
         /// </summary>
-        private void AverageVolumePeriod(int period)
+        private void Load()
         {
-            if (_tabClusterSpot.VolumeClusters.Count < BarOldPeriod.ValueInt + 2) // защита от отсутствия необходимых данных
+            if (!File.Exists(@"Engine\" + NameStrategyUniq + @"SettingsBot.txt"))
             {
                 return;
             }
-            decimal volumBackPeriod = 0; // объем за период, обнуляем в начале
-
-            int startIndex = _tabClusterSpot.VolumeClusters.Count - 2;
-            int endIndex = _tabClusterSpot.VolumeClusters.Count - 2 - period;
-
-            for (int i = startIndex; i > endIndex; i--)
+            try
             {
-                HorizontalVolumeCluster clasterPeriod = _tabClusterSpot.VolumeClusters[i]; // объём  в кластере
-                HorizontalVolumeLine vol = clasterPeriod.MaxSummVolumeLine; // линия с максимальным объемом
-                volumBackPeriod += vol.VolumeSumm; // суммируем за весь период
-            }
-            decimal zn = Okruglenie(volumBackPeriod / period, 4); // вычисляем среднее и
-            AverageVolumeBaсk = zn;                              // отправляем данные в переменную например 
-
-        }
-
-        decimal _volumeLineSell = 0; // объем максимальной  линии продаж
-        public decimal _priceMaxDeltaLineSell; // цена наибольшей линии
-        public bool _cameBigCluster = false; // вошел крупный
-        /// <summary>
-        /// смотрит пришла ли (есть) большая линия дельта (кластер)
-        /// </summary>
-        private void СameBigCluster()
-        {
-            if (AverageVolumeBaсk != 0 && // среднее значение не нуль и
-                _volumeLineSell != 0 &&  // максимальная линия не пуста и
-                AverageVolumeBaсk * coefficient.ValueDecimal < _volumeLineSell || // MaxSellLine больше средней * коэф или
-                bigvolume.ValueInt < _volumeLineSell && vklBigCluster.ValueBool == true)
-            {
-                if (_cameBigCluster != true)
+                using (StreamReader reader = new StreamReader(@"Engine\" + NameStrategyUniq + @"SettingsBot.txt"))
                 {
-                    PriceLargeEntry = 0;
-                    PriceLargeEntry = _priceMaxDeltaLineSell;   // записываем цену входа крупного объема,
-                    _cameBigCluster = true;
+                    DistLongInit = Convert.ToDecimal(reader.ReadLine());
+                    LongAdj = Convert.ToDecimal(reader.ReadLine());
+                    DistShortInit = Convert.ToDecimal(reader.ReadLine());
+                    ShortAdj = Convert.ToDecimal(reader.ReadLine());
+                    PriceLargeEntry = Convert.ToDecimal(reader.ReadLine());
+
+                    reader.Close();
                 }
- 
-                string strokPrint = "Цена входа КРУПНОГО = " + PriceLargeEntry.ToString() + "\n";
-                Debug.WriteLine(strokPrint);
             }
-            else _cameBigCluster = false;
+            catch (Exception)
+            {
+                // отправить в лог
+            }
         }
 
         /// <summary>
-        /// изменилась линия объёма максимальным суммарным объёмом Sell тут ждем MaxSellLine больше средней * коэф
+        /// взять имя робота
         /// </summary>
-        private void _tabClusterSpotDelta_MaxSellLineChangeEvent(HorizontalVolumeLine Line)
+        public override string GetNameStrategyType()
         {
-            AverageVolumePeriod(BarOldPeriod.ValueInt);// запускаю расчет средней 
-            _volumeLineSell = Line.VolumeSell; // суммарный объем продаж линии
-            _priceMaxDeltaLineSell = Line.Price;  // цена наибольшей линии
-            СameBigCluster(); // проверяет большой кластер 
-            SendTextView("Изменился обЪем Макс линии " + _volumeLineSell.ToString() );
+            return "Insight";
         }
+        /// <summary>
+        /// показать окно настроек робота
+        /// </summary>
+        public override void ShowIndividualSettingsDialog()
+        {
+            InsightUi ui = new InsightUi(this);
+            ui.Show();
+        }
+
 
         private void UserClickOnButtonEvent() // нажал на кнопку в панели параметров 
         {
@@ -1242,7 +1275,10 @@ namespace OsEngine.Robots.MyBot.Insight
             return chah;
         }
 
-        // дальше реализация INotifyPropertyChanged
+        #endregion
+
+        #region ======================= реализация INotifyPropertyChanged ====================================
+
         /// <summary>
         /// обработчик события изменения свойств
         /// </summary>
@@ -1264,5 +1300,6 @@ namespace OsEngine.Robots.MyBot.Insight
                 СallUpdate(name);
             }
         }
+        #endregion
     }
 }
