@@ -407,8 +407,8 @@ namespace OsEngine.Robots.MyBot.Insight
                 VolumePosition = 0;
                 decimal zna = VolumeInBaks.ValueInt;
                 VolumePosition = Okruglenie(zna / Price, DecimalsVolume);
-                string str = "VolumePosition = " + VolumePosition.ToString() + "\n";
-                Debug.WriteLine(str);
+                //string str = "VolumePosition = " + VolumePosition.ToString() + "\n";
+                //Debug.WriteLine(str);
             }
         }
 
@@ -426,7 +426,6 @@ namespace OsEngine.Robots.MyBot.Insight
             List<Position> positions = _tabSimple.PositionsOpenAll;
             if (_tabSimple.PositionsOpenAll.Count == 0) // нету открытых позиций
             {
-                СalculationVolumPosInSecur(SecurityDecimals);
                 _startPriceRecPos = _priceLargeEntry;
                 _stopPriceRecPos = _startPriceRecPos - (_priceLargeEntry / 100 * PercentOnEntry.ValueDecimal);
                 _stepRecPos = (_startPriceRecPos - _stopPriceRecPos) / PartsInput.ValueInt;
@@ -438,6 +437,7 @@ namespace OsEngine.Robots.MyBot.Insight
                 }
                 if (Price < lineOpenPos)
                 {
+                    СalculationVolumPosInSecur(SecurityDecimals);
                     _tabSimple.BuyAtLimit(VolumePosition / PartsInput.ValueInt, lineOpenPos - SlipageOpenFirst.ValueInt * _tabSimple.Securiti.PriceStep);
                 }
             }
@@ -448,7 +448,11 @@ namespace OsEngine.Robots.MyBot.Insight
                     Piramiding();
                 }
                 decimal OpenVolume = 0;
-                OpenVolume = positions[0].MaxVolume; 
+                if (positions != null && positions.Count > 0)
+                {
+                    OpenVolume = GetVolumePos(positions);
+                }
+                СalculationVolumPosInSecur(SecurityDecimals);
                 if (OpenVolume > VolumePosition )// проверка набранного обема 
                 {
                     //SendTextView("обем позиции превышен "+ VolumePosition.ToString());
@@ -458,33 +462,73 @@ namespace OsEngine.Robots.MyBot.Insight
                 {
                     return;
                 }
-                СalculationVolumPosInSecur(SecurityDecimals);
-                decimal openPos = 0;
-                int sumTred = 0;
-                sumTred = positions[0].MyTrades.Count; // количество трейдов в позиции
-                if (sumTred != 0)
+
+                decimal PriceLastTrade = 0;
+                if (positions != null && positions.Count > 0)
                 {
-                    openPos = positions[0].MyTrades[sumTred - 1].Price; // цена последнего трейда позиции
-                    //_tabSimple.PositionsLast.MyTrades[sumTred - 1].Price; // цена последнего трейда 
+                    PriceLastTrade = GetPriceLastTrade(positions); // цена последнего трейда позиции
                 }
-                if (openPos == 0 || _stepRecPos == 0)
+                if (PriceLastTrade == 0 || _stepRecPos == 0)
                 {
                     return;
                 }
-                decimal lineAddnPos = openPos - _stepRecPos;
+                decimal lineAddnPos = PriceLastTrade - _stepRecPos;
 
-                if (Price < _stopPriceRecPos || sumTred >= PartsInput.ValueInt)
+                if (Price < _stopPriceRecPos)
                 {
                     return;     //чтобы больше не покупать 
                 }
-                if (Price < lineAddnPos && sumTred < PartsInput.ValueInt && sumTred >= 1)
+                if (Price < lineAddnPos && PriceLastTrade !=0)
                 {
+                    if (positions[0].OpenOrders[0].State == OrderStateType.Activ)
+                    {
+                        return;
+                    }
+                    СalculationVolumPosInSecur(SecurityDecimals);
                     _tabSimple.BuyAtLimitToPosition(positions[0], lineAddnPos - SlipageOpenFirst.ValueInt * _tabSimple.Securiti.PriceStep, VolumePosition / PartsInput.ValueInt);
                     //_tabSimple.BuyAtLimit(Volume.ValueDecimal / PartsInput.ValueInt, Price);
                     //Thread.Sleep(1500);
                 }
             }
-
+        }
+        /// <summary>
+        /// берем объем моент в открытой позиции
+        /// </summary>
+        private decimal GetVolumePos(List<Position> positions)
+        {
+            if (positions != null && positions.Count > 0)
+            {
+                decimal OpenVolume = 0;
+                OpenVolume = positions[0].MaxVolume;
+                if (OpenVolume > 0)
+                {
+                    return OpenVolume;
+                }
+            }
+ 
+            return 0;
+        }
+        /// <summary>
+        /// взять цену последнего трейда 
+        /// </summary>
+        private decimal GetPriceLastTrade(List<Position> positions)
+        {
+            if (positions != null && positions.Count > 0)
+            {
+                decimal PriceLastTrade = 0;
+                int sumTred = 0;
+                sumTred = positions[0].MyTrades.Count; // количество трейдов в позиции
+                if (sumTred != 0)
+                {
+                    PriceLastTrade = positions[0].MyTrades[sumTred-1].Price; // цена последнего трейда позиции
+                    //_tabSimple.PositionsLast.MyTrades[sumTred - 1].Price; // цена последнего трейда 
+                    if (PriceLastTrade != 0)
+                    {
+                        return PriceLastTrade;
+                    }
+                }
+            }
+            return 0;
         }
         /// <summary>
         /// Добор обема позиции пирамидой
@@ -493,30 +537,41 @@ namespace OsEngine.Robots.MyBot.Insight
         {
             List<Position> positions = _tabSimple.PositionsOpenAll;
             decimal OpenVolume = 0;
-            OpenVolume = positions[0].MaxVolume;
- 
+            if (positions !=null)
+            {
+                OpenVolume = GetVolumePos(positions);
+            }
+            decimal pricePos = positions[0].EntryPrice;
+            СalculationVolumPosInSecur(SecurityDecimals);
+
             if (_cameBigCluster ==  true 
                 && positions.Count > 0 
                 && positions != null 
                 && OpenVolume != 0) // уже есть открытый обем 
             {
                 if (OpenVolume < VolumePosition // если объем не набран
-                     && VolumeBigGamer != 0) // есть курупного есть
+                     && VolumeBigGamer != 0
+                     && pricePos !=0) // есть курупного есть
                 {
-                    decimal PricePiram = _startPriceRecPos + (Price / 100 * lengthToPiramid.ValueDecimal);
+                    decimal PricePiram = pricePos + (Price / 100 * lengthToPiramid.ValueDecimal);
                     int sumTred = 0;
                     decimal PricLastTrade = 0;
                     sumTred = positions[0].MyTrades.Count; // количество трейдов в позиции
                     if (Price > PricePiram && sumTred < PartsInput.ValueInt && sumTred >= 1)
                     {
-                        СalculationVolumPosInSecur(SecurityDecimals);
- 
                         if (sumTred != 0)
                         {
                             PricLastTrade = positions[0].MyTrades[sumTred - 1].Price; // цена последнего трейда позиции
-                            if (Price > PricePiram && Price > PricLastTrade+ PricePiram)
+                            if (Price > PricePiram 
+                                && Price > PricLastTrade + (Price / 100 * lengthToPiramid.ValueDecimal)
+                                && PricLastTrade !=0)
                             {
-                                _tabSimple.BuyAtLimitToPosition(positions[0], PricePiram - SlipageOpenFirst.ValueInt * _tabSimple.Securiti.PriceStep, VolumePosition / PartsInput.ValueInt);
+                                if (positions[0].OpenOrders[0].State == OrderStateType.Activ) // защита от перенабора!
+                                {
+                                    return;
+                                }
+                                _tabSimple.BuyAtLimitToPosition(positions[0], Price, VolumePosition / PartsInput.ValueInt);
+                                SendTextView(" Добрались пирамидой");
                                 //_tabSimple.BuyAtLimit(Volume.ValueDecimal / PartsInput.ValueInt, Price);
                                 //Thread.Sleep(1500);
                             }
