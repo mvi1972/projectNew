@@ -65,7 +65,7 @@ namespace OsEngine.Robots.MyBot.Insight
             LagPunctToOpenClose = CreateParameter("Пунктов измен цены до отзыва ордера", 20, 20, 200, 5, "Ордеров");// откат цены от цены ордера, после чего он будет отозван
             SlipageReversClose = CreateParameter("Отклонение активации стопОрдера на выход", 20, 20, 200, 5, "Ордеров");// обратное проскальзывание для цены активации стопОрдера на закрытии
             SlipageReversOpen = CreateParameter("Отклонение стопОрдера входа в поз", 20, 20, 200, 5, "Ордеров"); // обратное проскальзывание для цены активации стопОрдера на открытии
-            BarOldPeriod = CreateParameter("количество свечей на вход", 3, 2, 20, 1, "Выхода");// количество свечей которые рассчитываем для входа
+            BarOldPeriod = CreateParameter("количество свечей на вход", 3, 2, 20, 1, "Входные");// количество свечей которые рассчитываем для входа
             windows = CreateParameterButton("кнопка выполнить назн фун", "Входные");
 
             ParametrsChangeByUser += Start_ParametrsChangeByUser; // событие изменения параметров пользователем
@@ -101,6 +101,28 @@ namespace OsEngine.Robots.MyBot.Insight
         }
 
         #region ============== Свойства ====================================================
+
+        /// <summary>
+        /// название бумаги
+        /// </summary>
+        public string SecurityName
+        {
+            get
+            {
+                //TabSimple.IsConnected &&
+                if (_tabSimple.IsConnected && _tabSimple.StartProgram == StartProgram.IsOsTrader)
+                {
+                    return _tabSimple.Securiti.Name;
+                }
+                if (_tabSimple.StartProgram == StartProgram.IsTester)
+                {
+                    return _tabSimple.Securiti.Name;
+                }
+                else return "";
+            }
+        }
+
+        public string _securityName;
         /// <summary>
         /// децимал бумаги
         /// </summary>
@@ -279,7 +301,7 @@ namespace OsEngine.Robots.MyBot.Insight
                     _cameBigCluster = true;
                 }
 
-                string strokPrint = "Цена входа КРУПНОГО = " + PriceLargeEntry.ToString() + "\n";
+                string strokPrint = SecurityName + " Цена входа КРУПНОГО = " + PriceLargeEntry.ToString() + "\n";
                 Debug.WriteLine(strokPrint);
             }
             else _cameBigCluster = false;
@@ -294,7 +316,7 @@ namespace OsEngine.Robots.MyBot.Insight
             _volumeLineSell = Line.VolumeSell; // суммарный объем продаж линии
             _priceMaxDeltaLineSell = Line.Price;  // цена наибольшей линии
             СameBigCluster(); // проверяет большой кластер 
-            SendTextView("Изменился обЪем Макс линии " + _volumeLineSell.ToString());
+            SendTextView(SecurityName + " обЪем Макс линии " + _volumeLineSell.ToString());
         }
 
         /// <summary>
@@ -307,7 +329,7 @@ namespace OsEngine.Robots.MyBot.Insight
             {
                 VolumeBigGamer = 0;
                 _cameBigCluster = false;
-                SendTextView(" КРУПНЯК закрылся на " + VolumeBigLineBuy.ToString());
+                SendTextView(SecurityName + " КРУПНЯК закрылся на " + VolumeBigLineBuy.ToString());
             }
         }
         /// <summary>
@@ -387,12 +409,11 @@ namespace OsEngine.Robots.MyBot.Insight
         {
             Big = PriceLargeEntry;    // для теста вывожу в окно 
 
-            if (PriceLargeEntry != 0)
+            if (PriceLargeEntry != 0 )
             {
-                RecruitingPosition(PriceLargeEntry);
+                 RecruitingPosition(PriceLargeEntry);
             }
         }
-
         /// <summary>
         ///  расчет объема позиции в валюте
         /// </summary>
@@ -453,7 +474,7 @@ namespace OsEngine.Robots.MyBot.Insight
                     OpenVolume = GetVolumePos(positions);
                 }
                 СalculationVolumPosInSecur(SecurityDecimals);
-                if (OpenVolume > VolumePosition )// проверка набранного обема 
+                if ( OpenVolume > VolumePosition)// проверка набранного обема 
                 {
                     //SendTextView("обем позиции превышен "+ VolumePosition.ToString());
                     return;
@@ -462,32 +483,38 @@ namespace OsEngine.Robots.MyBot.Insight
                 {
                     return;
                 }
-
-                decimal PriceLastTrade = 0;
-                if (positions != null && positions.Count > 0)
-                {
-                    PriceLastTrade = GetPriceLastTrade(positions); // цена последнего трейда позиции
-                }
-                if (PriceLastTrade == 0 || _stepRecPos == 0)
+                if (OpenVolume ==0)
                 {
                     return;
                 }
-                decimal lineAddnPos = PriceLastTrade - _stepRecPos;
+                decimal PriceLowerTrade = 0;
+                if (positions != null && positions.Count > 0)
+                {
+                    PriceLowerTrade = GetPriceLowerTrade(positions); // цена нижнего трейда позиции
+                }
+                if (PriceLowerTrade == 0 || _stepRecPos == 0)
+                {
+                    return;
+                }
+                decimal lineAddnPos = PriceLowerTrade - _stepRecPos;
 
                 if (Price < _stopPriceRecPos)
                 {
-                    return;     //чтобы больше не покупать 
+                    return;  //чтобы больше не покупать 
                 }
-                if (Price < lineAddnPos && PriceLastTrade !=0)
+                if (Price < lineAddnPos && PriceLowerTrade != 0)
                 {
-                    if (positions[0].OpenOrders[0].State == OrderStateType.Activ)
+                    if (OpenVolume == 0)
+                    {
+                        return;
+                    }
+                    if (positions[0].OpenActiv == true) // зашита от перебора 
                     {
                         return;
                     }
                     СalculationVolumPosInSecur(SecurityDecimals);
-                    _tabSimple.BuyAtLimitToPosition(positions[0], lineAddnPos - SlipageOpenFirst.ValueInt * _tabSimple.Securiti.PriceStep, VolumePosition / PartsInput.ValueInt);
-                    //_tabSimple.BuyAtLimit(Volume.ValueDecimal / PartsInput.ValueInt, Price);
-                    //Thread.Sleep(1500);
+                    _tabSimple.BuyAtLimitToPosition(positions[0], _tabSimple.PriceBestAsk, VolumePosition / PartsInput.ValueInt);
+                    SendTextView(SecurityName + " ДОБРАЛ по " + lineAddnPos.ToString());
                 }
             }
         }
@@ -508,6 +535,7 @@ namespace OsEngine.Robots.MyBot.Insight
  
             return 0;
         }
+
         /// <summary>
         /// взять цену последнего трейда 
         /// </summary>
@@ -527,6 +555,71 @@ namespace OsEngine.Robots.MyBot.Insight
                         return PriceLastTrade;
                     }
                 }
+            }
+            return 0;
+        }
+
+        /// <summary>
+        /// взять цену нижнего трейда позиции 
+        /// </summary>
+        private decimal GetPriceLowerTrade(List<Position> positions)
+        {
+            if (positions != null && positions.Count > 0)
+            {
+                decimal PriceLowerTrade = 0; // цена нижнего трйда
+                decimal PriceLastTrade = 0; // цена последнего трйда
+                int CountTred = 0;
+                CountTred = positions[0].MyTrades.Count; // количество трейдов в позиции
+                if (CountTred != 0)
+                    for (int i = 0; i < CountTred; i++)
+                    {
+                        PriceLastTrade = positions[0].MyTrades[i].Price; // цена трейда позиции
+                        if (PriceLastTrade !=0 && PriceLowerTrade == 0) 
+                        {
+                            PriceLowerTrade = PriceLastTrade;
+                        }
+                        if (PriceLowerTrade > PriceLastTrade)
+                        {
+                            PriceLowerTrade = PriceLastTrade;
+                        }
+                    }
+                if (PriceLowerTrade != 0)
+                {
+                    return PriceLowerTrade;
+                }
+            }
+            return 0;
+        }
+
+        /// <summary>
+        /// взять цену верхнего трейда сделки
+        /// </summary>
+        private decimal GetPriceUpperTrade(List<Position> positions)
+        {
+            if (positions != null && positions.Count > 0)
+            {
+                decimal PriceUpeerTrade = 0;
+                decimal PriceLastTrade = 0;
+                int CountTred = 0;
+                CountTred = positions[0].MyTrades.Count; // количество трейдов в позиции
+                if (CountTred != 0)
+                    for (int i = 0; i < CountTred; i++)
+                    {
+                        PriceLastTrade = positions[0].MyTrades[i].Price; // цена трейда позиции
+                        if (PriceLastTrade !=0 && PriceUpeerTrade == 0)
+                        {
+                            PriceUpeerTrade = PriceLastTrade;    
+                        }
+                        if (PriceUpeerTrade < PriceLastTrade)
+                        {
+                            PriceUpeerTrade = PriceLastTrade;
+                        }
+                    }
+                if (PriceUpeerTrade != 0)
+                {
+                    return PriceUpeerTrade;
+                }
+
             }
             return 0;
         }
@@ -550,32 +643,26 @@ namespace OsEngine.Robots.MyBot.Insight
                 && OpenVolume != 0) // уже есть открытый обем 
             {
                 if (OpenVolume < VolumePosition // если объем не набран
-                     && VolumeBigGamer != 0
-                     && pricePos !=0) // есть курупного есть
+                     && VolumeBigGamer != 0 // объем крупного есть
+                     && pricePos !=0) // цена позиции есть
                 {
-                    decimal PricePiram = pricePos + (Price / 100 * lengthToPiramid.ValueDecimal);
-                    int sumTred = 0;
-                    decimal PricLastTrade = 0;
-                    sumTred = positions[0].MyTrades.Count; // количество трейдов в позиции
-                    if (Price > PricePiram && sumTred < PartsInput.ValueInt && sumTred >= 1)
+                    decimal PricUpperTrade = 0;
+                    PricUpperTrade = GetPriceUpperTrade(positions); // цена верхнего трейда позиции
+                    decimal PricePiram = PricUpperTrade + (Price / 100 * lengthToPiramid.ValueDecimal);
+
+                    if (Price > PricePiram  && PricUpperTrade != 0 )
                     {
-                        if (sumTred != 0)
+                        if (OpenVolume == 0)
                         {
-                            PricLastTrade = positions[0].MyTrades[sumTred - 1].Price; // цена последнего трейда позиции
-                            if (Price > PricePiram 
-                                && Price > PricLastTrade + (Price / 100 * lengthToPiramid.ValueDecimal)
-                                && PricLastTrade !=0)
-                            {
-                                if (positions[0].OpenOrders[0].State == OrderStateType.Activ) // защита от перенабора!
-                                {
-                                    return;
-                                }
-                                _tabSimple.BuyAtLimitToPosition(positions[0], Price, VolumePosition / PartsInput.ValueInt);
-                                SendTextView(" Добрались пирамидой");
-                                //_tabSimple.BuyAtLimit(Volume.ValueDecimal / PartsInput.ValueInt, Price);
-                                //Thread.Sleep(1500);
-                            }
+                            return;
                         }
+                        if (positions[0].OpenActiv == true) // зашита от перебора 
+                        {
+                            return;
+                        }
+                        _tabSimple.BuyAtLimitToPosition(positions[0], _tabSimple.PriceBestBid, VolumePosition / PartsInput.ValueInt);
+                        SendTextView(SecurityName + " Добрались пирамидой" );
+                        return;
                     }
                 }
             }
