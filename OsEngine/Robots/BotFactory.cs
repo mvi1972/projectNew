@@ -24,6 +24,8 @@ using OsEngine.Robots.Trend;
 using OsEngine.Robots.OnScriptIndicators;
 using OsEngine.Robots.MyBot;
 using OsEngine.Robots.MyBot.Insight;
+using OsEngine.Robots.MyBot.InsightScreener;
+using OsEngine.Robots.MyBot.TestScreen;
 
 namespace OsEngine.Robots
 {
@@ -42,6 +44,10 @@ namespace OsEngine.Robots
             result.Add("ParaboTrel");
 
             result.Add("Insight");
+
+            result.Add("InsightScreener");
+
+            result.Add("ScreenBigGam");
             /*
             result.Add("SmaScreener");
             result.Add("Fisher");
@@ -124,6 +130,15 @@ namespace OsEngine.Robots
                 return bot;
             }
 
+            if (nameClass == "ScreenBigGam")
+            {
+                bot = new ScreenBigGam(name, startProgram);
+            }
+    
+            if (nameClass == "InsightScreener")
+            {
+                bot = new InsightScreener(name, startProgram);
+            }
 
             if (nameClass == "Insight")
             {
