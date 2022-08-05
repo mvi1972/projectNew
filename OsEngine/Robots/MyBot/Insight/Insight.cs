@@ -282,7 +282,10 @@ namespace OsEngine.Robots.MyBot.Insight
 
         decimal _volumeLineSell = 0; // объем максимальной  линии продаж
         public decimal _priceMaxDeltaLineSell; // цена наибольшей линии
-        public bool _cameBigCluster = false; // вошел крупный
+        /// <summary>
+        /// вошел крупный 
+        /// </summary>
+        public bool _cameBigCluster = false; 
         /// <summary>
         /// смотрит пришла ли (есть) большая линия дельта (кластер)
         /// </summary>
@@ -299,10 +302,9 @@ namespace OsEngine.Robots.MyBot.Insight
                     PriceLargeEntry = _priceMaxDeltaLineSell;   // записываем цену входа крупного объема,
                     VolumeBigGamer = _volumeLineSell; // объем крупного 
                     _cameBigCluster = true;
+                    string strokPrint = SecurityName + " ВОШЕЛ КРУПНЫЙ по " + PriceLargeEntry.ToString() + "\n";
+                    Debug.WriteLine(strokPrint);
                 }
-
-                string strokPrint = SecurityName + " Цена входа КРУПНОГО = " + PriceLargeEntry.ToString() + "\n";
-                Debug.WriteLine(strokPrint);
             }
             else _cameBigCluster = false;
         }
@@ -329,7 +331,7 @@ namespace OsEngine.Robots.MyBot.Insight
             {
                 VolumeBigGamer = 0;
                 _cameBigCluster = false;
-                SendTextView(SecurityName + " КРУПНЯК закрылся на " + VolumeBigLineBuy.ToString());
+                SendTextView(SecurityName + " КРУПНЯК слинял - " + VolumeBigLineBuy.ToString());
             }
         }
         /// <summary>
@@ -409,7 +411,7 @@ namespace OsEngine.Robots.MyBot.Insight
         {
             Big = PriceLargeEntry;    // для теста вывожу в окно 
 
-            if (PriceLargeEntry != 0 )
+            if (_cameBigCluster == true )
             {
                  RecruitingPosition(PriceLargeEntry);
             }
@@ -464,10 +466,7 @@ namespace OsEngine.Robots.MyBot.Insight
             }
             if (_tabSimple.PositionsOpenAll.Count != 0) // есть открытая позиция добираем объем
             {
-                if (Price > lineOpenPos)
-                {
-                    Piramiding();
-                }
+  
                 decimal OpenVolume = 0;
                 if (positions != null && positions.Count > 0)
                 {
@@ -492,7 +491,7 @@ namespace OsEngine.Robots.MyBot.Insight
                 {
                     PriceLowerTrade = GetPriceLowerTrade(positions); // цена нижнего трейда позиции
                 }
-                if (PriceLowerTrade == 0 || _stepRecPos == 0)
+                if (PriceLowerTrade == 0 || _stepRecPos == 0 && _cameBigCluster == true)
                 {
                     return;
                 }
@@ -502,6 +501,12 @@ namespace OsEngine.Robots.MyBot.Insight
                 {
                     return;  //чтобы больше не покупать 
                 }
+                SendTextView(" ДОбор разрешен " + SecurityName);
+                if (Price > lineOpenPos)
+                {
+                    Piramiding();
+                }
+
                 if (Price < lineAddnPos && PriceLowerTrade != 0)
                 {
                     if (OpenVolume == 0)
@@ -660,7 +665,7 @@ namespace OsEngine.Robots.MyBot.Insight
                         {
                             return;
                         }
-                        _tabSimple.BuyAtLimitToPosition(positions[0], _tabSimple.PriceBestBid, VolumePosition / PartsInput.ValueInt);
+                        _tabSimple.BuyAtMarketToPosition(positions[0], VolumePosition / PartsInput.ValueInt);
                         SendTextView(SecurityName + " Добрались пирамидой" );
                         return;
                     }
