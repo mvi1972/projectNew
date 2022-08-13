@@ -180,6 +180,21 @@ namespace OsEngine.Robots.MyBot.Insight
             get => _volumN;
             set => Set(ref _volumN, value);
         }
+        /// <summary>
+        ///Тикет класс средств в портфеле
+        /// </summary>
+        public string SecurClass
+        {
+            get => _securClass;
+            set
+            {
+                _securClass = value;
+                //OnPropertyChanged(nameof(SecurClass));
+            }
+        }
+
+        private string _securClass;
+
 
         #endregion
 
@@ -293,8 +308,7 @@ namespace OsEngine.Robots.MyBot.Insight
         {
             if (AverageVolumeBaсk != 0 && // среднее значение не нуль и
                 _volumeLineSell != 0 &&  // максимальная линия не пуста и
-                AverageVolumeBaсk * coefficient.ValueDecimal < _volumeLineSell || // MaxSellLine больше средней * коэф или
-                bigvolume.ValueInt < _volumeLineSell && vklBigCluster.ValueBool == true)
+                AverageVolumeBaсk * coefficient.ValueDecimal < _volumeLineSell ) // MaxSellLine больше средней * коэф или
             {
                 if (_cameBigCluster != true)
                 {
@@ -306,7 +320,16 @@ namespace OsEngine.Robots.MyBot.Insight
                     Debug.WriteLine(strokPrint);
                 }
             }
-            else _cameBigCluster = false;
+            if (bigvolume.ValueInt < _volumeLineSell && vklBigCluster.ValueBool == true && _cameBigCluster == false)
+            {
+                PriceLargeEntry = 0;
+                PriceLargeEntry = _priceMaxDeltaLineSell;   // записываем цену входа крупного объема,
+                VolumeBigGamer = _volumeLineSell; // объем крупного 
+                _cameBigCluster = true;
+                string strokPrint = SecurityName + " ВОШЛО объема больше " + bigvolume.ValueInt.ToString() + "\n";
+                Debug.WriteLine(strokPrint);
+            }
+            // else _cameBigCluster = false;
         }
 
         /// <summary>
@@ -383,11 +406,7 @@ namespace OsEngine.Robots.MyBot.Insight
         /// </summary>
         void CandleFinishedEvent(List<Candle> candles)
         {
-            if (IsOn.ValueBool == false)
-            {
-                return;
-            }
-
+  
             TryOpenPosition(); // разрешено  открывать
 
             List<Position> positions = _tabSimple.PositionsOpenAll;
@@ -398,11 +417,12 @@ namespace OsEngine.Robots.MyBot.Insight
             {
                 TryClosePosition(positions[0], candles);
                 Min_loss();
+                PartialPositionReset(positions);    
             }
-            /*else
+            else
             {
-                TryOpenPosition(); // разрешено  открывать позу (candles)
-            }*/
+                TryOpenPosition(); // разрешено ли  открывать позу (candles)
+            }
         }
         /// <summary>
         /// все условия для входа в позицию соблюдены - входим 
@@ -410,6 +430,11 @@ namespace OsEngine.Robots.MyBot.Insight
         private void TryOpenPosition()  // (List<Candle> candles)
         {
             Big = PriceLargeEntry;    // для теста вывожу в окно 
+
+            if (IsOn.ValueBool == false) // вклчен ли робот
+            {
+                return;
+            }
 
             if (_cameBigCluster == true )
             {
@@ -491,7 +516,7 @@ namespace OsEngine.Robots.MyBot.Insight
                 {
                     PriceLowerTrade = GetPriceLowerTrade(positions); // цена нижнего трейда позиции
                 }
-                if (PriceLowerTrade == 0 || _stepRecPos == 0 && _cameBigCluster == true)
+                if (PriceLowerTrade == 0 || _stepRecPos == 0 )
                 {
                     return;
                 }
@@ -501,7 +526,7 @@ namespace OsEngine.Robots.MyBot.Insight
                 {
                     return;  //чтобы больше не покупать 
                 }
-                SendTextView(" ДОбор разрешен " + SecurityName);
+ 
                 if (Price > lineOpenPos)
                 {
                     Piramiding();
@@ -517,6 +542,7 @@ namespace OsEngine.Robots.MyBot.Insight
                     {
                         return;
                     }
+                    SendTextView(" ДОбор разрешен " + SecurityName);
                     СalculationVolumPosInSecur(SecurityDecimals);
                     _tabSimple.BuyAtLimitToPosition(positions[0], _tabSimple.PriceBestAsk, VolumePosition / PartsInput.ValueInt);
                     SendTextView(SecurityName + " ДОБРАЛ по " + lineAddnPos.ToString());
@@ -629,6 +655,36 @@ namespace OsEngine.Robots.MyBot.Insight
             return 0;
         }
         /// <summary>
+        /// Взять название класса (квотируемой валюты) подключенной бумаги
+        /// </summary>
+        private void GetNameSecuretiClass(BotTabSimple TabSimple)
+        {
+            if (TabSimple.StartProgram == StartProgram.IsTester)
+            {
+                string str = TabSimple.Connector.SecurityClass;
+                _securClass = str;
+            }
+            if (TabSimple.IsConnected && TabSimple.StartProgram == StartProgram.IsOsTrader)
+            {
+                string str = TabSimple.Connector.SecurityClass;
+                _securClass = str;
+            }
+        }
+
+        /// <summary>
+        /// взять баланс квотируемой валюты
+        /// </summary>
+        private decimal GetBalans(BotTabSimple TabSimple)
+        {
+            if (_securClass != null && TabSimple.IsConnected && TabSimple.StartProgram == StartProgram.IsOsTrader)
+            {
+                decimal balans = TabSimple.Portfolio.GetPositionOnBoard().Find(pos =>
+                pos.SecurityNameCode == _securClass).ValueCurrent;
+                return balans;
+            }
+            return 0;
+        }
+        /// <summary>
         /// Добор обема позиции пирамидой
         /// </summary>
         private void Piramiding()
@@ -665,12 +721,60 @@ namespace OsEngine.Robots.MyBot.Insight
                         {
                             return;
                         }
+                        SendTextView(" ДОбор разрешен " + SecurityName);
                         _tabSimple.BuyAtMarketToPosition(positions[0], VolumePosition / PartsInput.ValueInt);
                         SendTextView(SecurityName + " Добрались пирамидой" );
                         return;
                     }
                 }
             }
+        }
+
+        /// <summary>
+        ///  Частичный сброс позиции
+        /// </summary>
+        private void PartialPositionReset(List<Position> positions)
+        {
+            decimal PriceStop = positions[0].StopOrderPrice;
+            decimal ProfitOperationPersent = _tabSimple.PositionsLast.ProfitOperationPersent; // прибыль позы 
+            decimal partialPersent = Price / 100 * toProfit.ValueDecimal;
+            decimal OpenVolume = 0;
+            if (positions != null && positions.Count > 0)
+            {
+                OpenVolume = GetVolumePos(positions);
+            }
+            СalculationVolumPosInSecur(SecurityDecimals);
+ 
+            if (ProfitOperationPersent > partialPersent && OpenVolume > VolumePosition)
+            {
+                //_tabSimple.SellAtMarketToPosition(positions[0], VolumePosition / PartsInput.ValueInt);
+                _tabSimple.CloseAtMarket(positions[0], OpenVolume / PartsInput.ValueInt);
+                SendTextView(SecurityName + " Сбросили часть");
+            }
+            if (_cameBigCluster == false) // ушел крупняк  пересталяем стоп в безубыток 
+            {
+                stopBuy = 0;
+                stopBuy = _tabSimple.PositionsLast.EntryPrice;
+                {
+                    if (stopBuy != 0  && Price > stopBuy && _tabSimple.PositionsLast.StopOrderIsActiv == true)
+                    {
+                         _tabSimple.CloseAtTrailingStop(_tabSimple.PositionsLast, stopBuy, stopBuy);
+                          //_tabSimple.CloseAtMarket(positions[0], positions[0].OpenVolume);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        ///  Cброс позиции
+        /// </summary>
+        private void PositionReset(List<Position> positions)
+        {
+            if (_cameBigCluster == false)
+            {
+
+            }
+
         }
 
         /// <summary>
@@ -757,8 +861,9 @@ namespace OsEngine.Robots.MyBot.Insight
         {
             PriceLargeEntry = 0; // цена входа крупного объема 
             lineOpenPos = 0; //  обнуляем уровень входа
-            VolumePosition = 0; // обем входа в позу
-            VolumeBigGamer = 0; 
+            VolumePosition = 0; // обем входа в позу 
+            VolumeBigGamer = 0;
+            _cameBigCluster = false;
         }
 
         /// <summary>
